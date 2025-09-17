@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "github-markdown-css/github-markdown.css";
-import "highlight.js/styles/github.css";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["500"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -16,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Markdown Editor",
-  description: "VSCode-style markdown editor",
+  title: "SensAi - AI-Powered Document Processing Platform",
+  description: "Streamline your workflow with AI-powered document analysis, Excel processing, and professional document generation tools.",
 };
 
 export default function RootLayout({
