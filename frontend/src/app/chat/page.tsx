@@ -721,16 +721,10 @@ function ChatInterface() {
 
           {/* Right: Canvas column */}
           {!isCanvasMinimized && (
-            <div className={`relative hidden h-full flex-col border-l-2 md:flex w-full md:w-1/2 flex-shrink-0 ${
-              isDarkMode ? 'border-white/30' : 'border-gray-300'
-            }`}>
+            <div className="relative hidden h-full flex-col border-l-2 md:flex w-full md:w-1/2 flex-shrink-0" style={{ borderColor: 'var(--border-color)' }}>
             {/* Canvas header */}
-            <div className={`flex items-center justify-between px-6 py-4 border-b-2 ${
-              isDarkMode ? 'border-white/30' : 'border-gray-300'
-            }`}>
-              <div className={`flex items-center gap-2 ${
-                isDarkMode ? 'text-zinc-200' : 'text-gray-700'
-              }`}>
+            <div className="flex items-center justify-between px-6 py-4 border-b-2" style={{ borderColor: 'var(--border-color)' }}>
+              <div className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <button
                   onClick={minimizeCanvas}
                   className="btn btn-secondary btn-sm p-1"
@@ -746,10 +740,8 @@ function ChatInterface() {
                       onChange={(e) => setTempName(e.target.value)}
                       onKeyDown={handleNameKeyDown}
                       onBlur={saveName}
-                      className={`bg-transparent border-none outline-none text-sm px-1 py-0.5 rounded ${
-                        isDarkMode ? 'text-zinc-200' : 'text-gray-700'
-                      }`}
-                      style={{ minWidth: '60px', maxWidth: '200px' }}
+                      className="bg-transparent border-none outline-none text-sm px-1 py-0.5 rounded"
+                      style={{ color: 'var(--text-primary)', minWidth: '60px', maxWidth: '200px' }}
                     />
                   ) : (
                     <span 
@@ -762,9 +754,7 @@ function ChatInterface() {
                   <ChevronDownIcon className="h-4 w-4" style={{ color: 'var(--blue-primary)' }} />
                 </div>
               </div>
-              <div className={`flex items-center gap-3 ml-auto ${
-                isDarkMode ? 'text-zinc-300/80' : 'text-gray-600'
-              }`}>
+              <div className="flex items-center gap-3 ml-auto" style={{ color: 'var(--text-secondary)' }}>
                 <button 
                   onClick={() => {
                     const history = canvasRef.current?.getHistory();
