@@ -512,7 +512,7 @@ function ChatInterface() {
         )}
 
         {/* Top left controls */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        <div className="fixed top-20 left-4 z-10 flex items-center gap-2">
           {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
@@ -825,7 +825,7 @@ function ChatInterface() {
 
           {/* Restore Canvas Button (when minimized) */}
           {isCanvasMinimized && (
-            <div className="absolute top-4 right-4 z-20">
+            <div className="fixed top-20 right-4 z-20">
               <button
                 onClick={restoreCanvas}
                 className="btn btn-primary flex items-center gap-2"
