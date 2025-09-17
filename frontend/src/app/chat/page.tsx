@@ -27,7 +27,7 @@ import { Layout, useTheme } from "@/components/Layout";
 // guaranteed, but spacing, colors, and hierarchy are tuned carefully to match.
 
 function ChatInterface() {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, toggleTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [canvasName, setCanvasName] = useState("New");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -515,7 +515,7 @@ function ChatInterface() {
         <div className="absolute top-20 left-4 z-10 flex items-center gap-2">
           {/* Theme toggle button */}
           <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleTheme}
             className="btn btn-secondary p-2"
             style={{
               backgroundColor: 'var(--bg-secondary)',
