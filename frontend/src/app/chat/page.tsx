@@ -512,7 +512,7 @@ function ChatInterface() {
         )}
 
         {/* Top left controls */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        <div className="absolute top-20 left-4 z-10 flex items-center gap-2">
           {/* Theme toggle button */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -733,9 +733,7 @@ function ChatInterface() {
               }`}>
                 <button
                   onClick={minimizeCanvas}
-                  className={`p-1 rounded transition-colors ${
-                    isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'
-                  }`}
+                  className="btn btn-secondary btn-sm p-1"
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
@@ -775,9 +773,7 @@ function ChatInterface() {
                       setShowVersionHistory(true);
                     }
                   }}
-                  className={`p-1 transition-colors ${
-                    isDarkMode ? 'hover:text-zinc-200' : 'hover:text-gray-800'
-                  }`}
+                  className="btn btn-secondary btn-sm p-1"
                   title="Version History"
                 >
                   <ClockIcon className="h-5 w-5" />
@@ -785,33 +781,25 @@ function ChatInterface() {
                 <button 
                   onClick={() => canvasRef.current?.undo()}
                   disabled={!canUndo}
-                  className={`p-1 transition-colors ${
-                    isDarkMode ? 'hover:text-zinc-200 disabled:text-zinc-600 disabled:opacity-50' : 'hover:text-gray-800 disabled:text-gray-400 disabled:opacity-50'
-                  }`}
+                  className="btn btn-secondary btn-sm p-1"
                   title="Undo (Ctrl+Z)"
                 >
                   <ArrowUturnLeftIcon className="h-5 w-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => canvasRef.current?.redo()}
                   disabled={!canRedo}
-                  className={`p-1 transition-colors ${
-                    isDarkMode ? 'hover:text-zinc-200 disabled:text-zinc-600 disabled:opacity-50' : 'hover:text-gray-800 disabled:text-gray-400 disabled:opacity-50'
-                  }`}
+                  className="btn btn-secondary btn-sm p-1"
                   title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
                 >
                   <ArrowUturnRightIcon className="h-5 w-5" />
                 </button>
-                <button className={`p-1 transition-colors ${
-                  isDarkMode ? 'hover:text-zinc-200' : 'hover:text-gray-800'
-                }`}>
+                <button className="btn btn-secondary btn-sm p-1">
                   <ArrowDownTrayIcon className="h-5 w-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => setShowHelp(true)}
-                  className={`p-1 transition-colors ${
-                    isDarkMode ? 'hover:text-zinc-200' : 'hover:text-gray-800'
-                  }`}
+                  className="btn btn-secondary btn-sm p-1"
                   aria-label="Help & Guide"
                 >
                   <QuestionMarkCircleIcon className="h-5 w-5" />
