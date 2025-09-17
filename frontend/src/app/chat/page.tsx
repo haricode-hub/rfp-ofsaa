@@ -485,7 +485,10 @@ function ChatInterface() {
       `}</style>
 
       {/* App background */}
-      <div className={`relative h-screen w-full overflow-hidden ${isDarkMode ? 'bg-[#0B0B0D]' : 'bg-[#FFFAF5]'}`}>
+      <div
+        className="relative h-screen w-full overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+      >
         {/* Animated gradient backgrounds */}
         {isDarkMode ? (
           <>
@@ -513,11 +516,12 @@ function ChatInterface() {
           {/* Theme toggle button */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className={`p-2 rounded-lg transition-colors ${
-              isDarkMode 
-                ? 'bg-white/10 hover:bg-white/20 text-zinc-200' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
-            }`}
+            className="btn btn-secondary p-2"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--blue-primary)',
+              borderColor: 'var(--border-color)'
+            }}
             aria-label="Toggle theme"
           >
             {isDarkMode ? (
@@ -531,11 +535,7 @@ function ChatInterface() {
           <button
             onClick={handleFileSelect}
             disabled={isUploading}
-            className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-              isDarkMode 
-                ? 'bg-white/10 hover:bg-white/20 text-zinc-200 disabled:opacity-50' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 disabled:opacity-50'
-            }`}
+            className="btn btn-primary flex items-center gap-2"
             aria-label="Upload file"
           >
             <ArrowUpTrayIcon className="h-5 w-5" />
@@ -548,11 +548,7 @@ function ChatInterface() {
           {documentContent && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                isDarkMode 
-                  ? 'bg-white/10 hover:bg-white/20 text-zinc-200' 
-                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
-              }`}
+              className="btn btn-secondary flex items-center gap-2"
               aria-label="Clear document"
             >
               <XMarkIcon className="h-5 w-5" />
