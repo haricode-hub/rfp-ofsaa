@@ -178,7 +178,7 @@ const Footer: React.FC = () => {
                   href="/chat"
                   className="nav-link"
                 >
-                  Chat Agent
+                  Knowledge Agent
                 </Link>
               </li>
               <li>
@@ -186,7 +186,7 @@ const Footer: React.FC = () => {
                   href="/excelbot"
                   className="nav-link"
                 >
-                  Presale Agent
+                  Presales Agent
                 </Link>
               </li>
               <li>

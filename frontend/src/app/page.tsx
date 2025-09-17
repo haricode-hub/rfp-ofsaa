@@ -65,7 +65,7 @@ function HomeContent() {
             {/* Chat with Doc */}
             <div className="card p-8">
               <h3 className="service-title mb-4">
-                Chat Agent
+                Knowledge Agent
               </h3>
               <p className="body-text mb-6">
                 Upload any kinds of document and have intelligent conversations about its content.
@@ -84,7 +84,7 @@ function HomeContent() {
                   e.currentTarget.style.color = 'var(--blue-primary)';
                 }}
               >
-                Try Chat Agent
+                Try Knowledge Agent
                 <ArrowRightIcon className="ml-2 h-4 w-4" />
               </Link>
             </div>
@@ -92,7 +92,7 @@ function HomeContent() {
             {/* PresaleBot */}
             <div className="card p-8">
               <h3 className="service-title mb-4">
-                Presale Agent
+                Presales Agent
               </h3>
               <p className="body-text mb-6">
                 Process Excel files intelligently with AI and automate spreadsheet operations effortlessly.
@@ -110,7 +110,7 @@ function HomeContent() {
                   e.currentTarget.style.color = 'var(--blue-primary)';
                 }}
               >
-                Try Presale Agent
+                Try Presales Agent
                 <ArrowRightIcon className="ml-2 h-4 w-4" />
               </Link>
             </div>
