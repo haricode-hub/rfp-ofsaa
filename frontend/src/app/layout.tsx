@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SensAi - AI-Powered Document Processing Platform",
   description: "Streamline your workflow with AI-powered document analysis, Excel processing, and professional document generation tools.",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 interface RootLayoutProps {
@@ -26,16 +27,11 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: Readonly<RootLayoutProps>) {
   return (
     <html lang="en">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
       <body
         className={`${inter.variable} ${geistMono.variable} antialiased`}
         style={{ fontFamily: 'var(--font-inter)' }}
       >
-        <main>
-          {children}
-        </main>
+        {children}
       </body>
     </html>
   );
