@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Layout, useTheme } from '@/components/ui/Layout';
 import {
   ChevronDownIcon,
   XMarkIcon,
@@ -19,15 +20,9 @@ import MarkdownCanvas, { MarkdownCanvasRef } from "@/components/MarkdownCanvas";
 import DocumentDisplay from "@/components/DocumentDisplay";
 import UploadConfirmModal from "@/components/modals/UploadConfirmModal";
 import TypingIndicator from "@/components/TypingIndicator";
-import { Layout, useTheme } from "@/components/Layout";
 
-// NOTE: This is a single-file React component meant to closely replicate the
-// provided screenshot, using Heroicons and Inter (Medium). Tailwind is used for
-// layout/spacing/visuals. Exact pixel parity in every environment is not
-// guaranteed, but spacing, colors, and hierarchy are tuned carefully to match.
-
-function ChatInterface() {
-  const { isDarkMode } = useTheme();
+function ChatWithDocContent() {
+  const { isDarkMode, toggleTheme } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [canvasName, setCanvasName] = useState("New");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -49,7 +44,7 @@ function ChatInterface() {
     timestamp: number;
     id: string;
   }
-  const [versionHistory, setVersionHistory] = useState<HistoryEntry[]>([]);
+  const [, setVersionHistory] = useState<HistoryEntry[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +123,28 @@ function ChatInterface() {
   const cancelEditing = () => {
     setIsEditingName(false);
     setTempName("");
+  };
+
+  // Download canvas content as markdown file
+  const downloadCanvasContent = () => {
+    // Get content from the MarkdownCanvas component
+    const content = canvasRef.current?.getContent() || '';
+    
+    if (!content.trim()) {
+      alert('No content to download. Please add some text to the canvas first.');
+      return;
+    }
+    
+    // Create and download the file
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${canvasName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -350,16 +367,19 @@ function ChatInterface() {
 
   return (
     <div
-      className="min-h-screen w-full"
+      className="min-h-screen w-full transition-colors duration-300"
       style={{
+        // Inter Medium across the app
+        fontFamily:
+          "'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji'",
+        fontWeight: 500,
         backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-primary)',
-        fontFamily: 'var(--font-primary)',
-        fontWeight: 'var(--font-weight-regular)',
+        color: 'var(--text-primary)'
       }}
     >
-      {/* Professional styling for chat interface */}
+      {/* Import Inter 500 */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap');
         
         @keyframes gradient-shift {
           0%, 100% {
@@ -485,10 +505,8 @@ function ChatInterface() {
       `}</style>
 
       {/* App background */}
-      <div
-        className="relative h-screen w-full overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-primary)' }}
-      >
+      <div className={`relative w-full overflow-hidden ${isDarkMode ? 'bg-[#0B0B0D]' : 'bg-[#FFFAF5]'}`}
+           style={{ height: 'calc(100vh - 4rem)', marginTop: '4rem' }}>
         {/* Animated gradient backgrounds */}
         {isDarkMode ? (
           <>
@@ -512,15 +530,22 @@ function ChatInterface() {
         )}
 
         {/* Top left controls */}
-        <div className="absolute top-20 left-4 z-10 flex items-center gap-2">
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           {/* Theme toggle button */}
           <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="btn btn-secondary p-2"
+            onClick={toggleTheme}
+            className="p-2 rounded-lg transition-all duration-200 shadow-md hover:transform hover:scale-105"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--blue-primary)',
-              borderColor: 'var(--border-color)'
+              backgroundColor: 'var(--blue-secondary)',
+              color: 'var(--blue-primary)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+              e.currentTarget.style.color = 'var(--blue-accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+              e.currentTarget.style.color = 'var(--blue-primary)';
             }}
             aria-label="Toggle theme"
           >
@@ -535,7 +560,26 @@ function ChatInterface() {
           <button
             onClick={handleFileSelect}
             disabled={isUploading}
-            className="btn btn-primary flex items-center gap-2"
+            className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium border-2 shadow-lg hover:transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: 'var(--blue-secondary)',
+              borderColor: 'var(--blue-secondary)',
+              color: 'var(--blue-primary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isUploading) {
+                e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                e.currentTarget.style.borderColor = 'var(--blue-light)';
+                e.currentTarget.style.color = 'var(--blue-accent)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isUploading) {
+                e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                e.currentTarget.style.borderColor = 'var(--blue-secondary)';
+                e.currentTarget.style.color = 'var(--blue-primary)';
+              }
+            }}
             aria-label="Upload file"
           >
             <ArrowUpTrayIcon className="h-5 w-5" />
@@ -548,7 +592,22 @@ function ChatInterface() {
           {documentContent && (
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="btn btn-secondary flex items-center gap-2"
+              className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium border-2 shadow-lg hover:transform hover:scale-105"
+              style={{
+                backgroundColor: 'var(--blue-secondary)',
+                borderColor: 'var(--blue-secondary)',
+                color: 'var(--blue-primary)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                e.currentTarget.style.borderColor = 'var(--blue-light)';
+                e.currentTarget.style.color = 'var(--blue-accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                e.currentTarget.style.borderColor = 'var(--blue-secondary)';
+                e.currentTarget.style.color = 'var(--blue-primary)';
+              }}
               aria-label="Clear document"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -558,13 +617,11 @@ function ChatInterface() {
 
           {/* Filename display */}
           {documentFilename && (
-            <div
-              className="px-3 py-2 rounded-lg nav-text"
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-primary)'
-              }}
-            >
+            <div className={`px-3 py-2 rounded-lg text-sm font-medium ${
+              isDarkMode 
+                ? 'bg-white/5 text-zinc-300' 
+                : 'bg-gray-100 text-gray-700'
+            }`}>
               <span className={`${
                 !isCanvasMinimized ? 'max-w-[200px] truncate block' : ''
               }`}>
@@ -699,16 +756,18 @@ function ChatInterface() {
                         />
                       </form>
                       {/* Right actions */}
-                      <button
+                      <button 
                         type="button"
                         onClick={handleChatSubmit}
                         disabled={!documentContent.trim() || !chatQuery.trim() || isGenerating}
-                        className="btn btn-sm p-2"
-                        style={{
-                          backgroundColor: 'var(--blue-primary)',
-                          color: '#FFFFFF',
-                          opacity: (!documentContent.trim() || !chatQuery.trim() || isGenerating) ? 0.5 : 1
-                        }}
+                        className={`transition-colors ${
+                          !documentContent.trim() || !chatQuery.trim() || isGenerating
+                            ? 'text-zinc-500/50 cursor-not-allowed'
+                            : (isDarkMode 
+                              ? 'text-zinc-300/90 hover:text-zinc-200' 
+                              : 'text-gray-600 hover:text-gray-800'
+                            )
+                        }`}
                       >
                         <ArrowRightCircleIcon className="h-5 w-5" />
                       </button>
@@ -733,7 +792,19 @@ function ChatInterface() {
               }`}>
                 <button
                   onClick={minimizeCanvas}
-                  className="btn btn-secondary btn-sm p-1"
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--blue-secondary)',
+                    color: 'var(--blue-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                    e.currentTarget.style.color = 'var(--blue-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                    e.currentTarget.style.color = 'var(--blue-primary)';
+                  }}
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
@@ -759,7 +830,7 @@ function ChatInterface() {
                       {canvasName}
                     </span>
                   )}
-                  <ChevronDownIcon className="h-4 w-4" style={{ color: 'var(--blue-primary)' }} />
+                  <ChevronDownIcon className="h-4 w-4 opacity-80" />
                 </div>
               </div>
               <div className={`flex items-center gap-3 ml-auto ${
@@ -773,7 +844,19 @@ function ChatInterface() {
                       setShowVersionHistory(true);
                     }
                   }}
-                  className="btn btn-secondary btn-sm p-1"
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--blue-secondary)',
+                    color: 'var(--blue-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                    e.currentTarget.style.color = 'var(--blue-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                    e.currentTarget.style.color = 'var(--blue-primary)';
+                  }}
                   title="Version History"
                 >
                   <ClockIcon className="h-5 w-5" />
@@ -781,25 +864,85 @@ function ChatInterface() {
                 <button 
                   onClick={() => canvasRef.current?.undo()}
                   disabled={!canUndo}
-                  className="btn btn-secondary btn-sm p-1"
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: canUndo ? 'var(--blue-secondary)' : 'var(--bg-tertiary)',
+                    color: canUndo ? 'var(--blue-primary)' : 'var(--text-muted)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canUndo) {
+                      e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                      e.currentTarget.style.color = 'var(--blue-accent)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canUndo) {
+                      e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                      e.currentTarget.style.color = 'var(--blue-primary)';
+                    }
+                  }}
                   title="Undo (Ctrl+Z)"
                 >
                   <ArrowUturnLeftIcon className="h-5 w-5" />
                 </button>
-                <button
+                <button 
                   onClick={() => canvasRef.current?.redo()}
                   disabled={!canRedo}
-                  className="btn btn-secondary btn-sm p-1"
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: canRedo ? 'var(--blue-secondary)' : 'var(--bg-tertiary)',
+                    color: canRedo ? 'var(--blue-primary)' : 'var(--text-muted)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canRedo) {
+                      e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                      e.currentTarget.style.color = 'var(--blue-accent)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canRedo) {
+                      e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                      e.currentTarget.style.color = 'var(--blue-primary)';
+                    }
+                  }}
                   title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
                 >
                   <ArrowUturnRightIcon className="h-5 w-5" />
                 </button>
-                <button className="btn btn-secondary btn-sm p-1">
+                <button 
+                  onClick={downloadCanvasContent}
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--blue-secondary)',
+                    color: 'var(--blue-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                    e.currentTarget.style.color = 'var(--blue-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                    e.currentTarget.style.color = 'var(--blue-primary)';
+                  }}
+                  title="Download Canvas Content"
+                >
                   <ArrowDownTrayIcon className="h-5 w-5" />
                 </button>
-                <button
+                <button 
                   onClick={() => setShowHelp(true)}
-                  className="btn btn-secondary btn-sm p-1"
+                  className="p-2 rounded-lg transition-all duration-200 shadow-sm hover:transform hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--blue-secondary)',
+                    color: 'var(--blue-primary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                    e.currentTarget.style.color = 'var(--blue-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                    e.currentTarget.style.color = 'var(--blue-primary)';
+                  }}
                   aria-label="Help & Guide"
                 >
                   <QuestionMarkCircleIcon className="h-5 w-5" />
@@ -836,10 +979,22 @@ function ChatInterface() {
 
           {/* Restore Canvas Button (when minimized) */}
           {isCanvasMinimized && (
-            <div className="absolute top-20 right-4 z-20">
+            <div className="absolute top-4 right-4 z-20">
               <button
                 onClick={restoreCanvas}
-                className="btn btn-primary flex items-center gap-2"
+                className="px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium shadow-lg hover:transform hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--blue-secondary)',
+                  color: 'var(--blue-primary)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--blue-light)';
+                  e.currentTarget.style.color = 'var(--blue-accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--blue-secondary)';
+                  e.currentTarget.style.color = 'var(--blue-primary)';
+                }}
                 aria-label="Restore canvas"
               >
                 <span className="text-sm font-medium">{canvasName}</span>
@@ -858,8 +1013,8 @@ function ChatInterface() {
             <div 
               className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
-                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-blue-500/50' 
+                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-blue-500/20'
               }`}
             >
               {/* Modal Header */}
@@ -868,7 +1023,7 @@ function ChatInterface() {
                   ? 'border-white/20 bg-zinc-900/90' 
                   : 'border-amber-200/50 bg-white/90'
               }`}>
-                <h2 className="text-xl font-medium" style={{ fontWeight: 500 }}>
+                <h2 className="text-xl font-medium" style={{ fontWeight: 500, color: 'var(--blue-primary)' }}>
                   Processing Document
                 </h2>
               </div>
@@ -922,8 +1077,8 @@ function ChatInterface() {
             <div 
               className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
-                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-blue-500/50' 
+                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-blue-500/20'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -941,7 +1096,7 @@ function ChatInterface() {
                   className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-blue-500/10'
                   }`}
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -966,7 +1121,7 @@ function ChatInterface() {
                   className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 shadow-black/10'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 shadow-blue-500/10'
                   }`}
                   style={{ fontWeight: 500 }}
                 >
@@ -987,529 +1142,15 @@ function ChatInterface() {
             </div>
           </div>
         )}
-
-        {/* Help Modal */}
-        {showHelp && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
-            style={{ backgroundColor: isDarkMode ? 'rgba(11, 11, 13, 0.8)' : 'rgba(255, 250, 245, 0.8)' }}
-            onClick={() => setShowHelp(false)}
-          >
-            <div 
-              className={`relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
-                isDarkMode 
-                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
-                isDarkMode 
-                  ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
-              }`}>
-                <h2 className="text-2xl font-medium" style={{ fontWeight: 500 }}>
-                  📝 Markdown Canvas Guide
-                </h2>
-                <button
-                  onClick={() => setShowHelp(false)}
-                  className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
-                    isDarkMode 
-                      ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
-                  }`}
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="flex-1 p-6 space-y-8 overflow-y-auto min-h-0" style={{ fontWeight: 500 }}>
-                {/* How It Works */}
-                <section>
-                  <h3 className="text-xl mb-4 flex items-center gap-2" style={{ fontWeight: 500 }}>
-                    ⚡ How the Canvas Works
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <p className={isDarkMode ? 'text-zinc-200' : 'text-gray-900'}>
-                      The Markdown Canvas is a smart editor that switches between <strong>Edit Mode</strong> and <strong>Preview Mode</strong>:
-                    </p>
-                    <ul className="space-y-2 ml-4">
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-500 mt-1">✓</span>
-                        <span><strong>Edit Mode:</strong> Type or paste Markdown - shows as plain text</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-blue-500 mt-1">✓</span>
-                        <span><strong>Preview Mode:</strong> Shows beautifully rendered Markdown with formatting</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-purple-500 mt-1">✓</span>
-                        <span><strong>Auto-Switch:</strong> Automatically switches to preview 1.5 seconds after you stop typing</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-orange-500 mt-1">✓</span>
-                        <span><strong>Click to Edit:</strong> Click anywhere in preview mode to edit again</span>
-                      </li>
-                    </ul>
-                  </div>
-                </section>
-
-                {/* Keyboard Shortcuts */}
-                <section>
-                  <h3 className="text-xl mb-4 flex items-center gap-2" style={{ fontWeight: 500 }}>
-                    ⌨️ Keyboard Shortcuts
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <kbd className={`px-3 py-1.5 text-xs rounded-full ${
-                          isDarkMode 
-                            ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
-                        }`}>Escape</kbd>
-                        <span className={`text-sm ${
-                          isDarkMode ? 'text-zinc-200' : 'text-gray-900'
-                        }`}>Preview Now</span>
-                      </div>
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-zinc-400/70' : 'text-gray-500'
-                      }`}>Instantly switch to preview mode</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex gap-1 items-center">
-                          <kbd className={`px-3 py-1.5 text-xs rounded-full ${
-                            isDarkMode 
-                              ? 'bg-white/10 text-zinc-300' 
-                              : 'bg-amber-100 text-amber-900'
-                          }`}>Ctrl</kbd>
-                          <span className={`text-xs ${
-                            isDarkMode ? 'text-zinc-400' : 'text-gray-500'
-                          }`}>+</span>
-                          <kbd className={`px-3 py-1.5 text-xs rounded-full ${
-                            isDarkMode 
-                              ? 'bg-white/10 text-zinc-300' 
-                              : 'bg-amber-100 text-amber-900'
-                          }`}>Enter</kbd>
-                        </div>
-                        <span className={`text-sm ${
-                          isDarkMode ? 'text-zinc-200' : 'text-gray-900'
-                        }`}>Preview Now</span>
-                      </div>
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-zinc-400/70' : 'text-gray-500'
-                      }`}>Alternative preview shortcut</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <kbd className={`px-3 py-1.5 text-xs rounded-full ${
-                          isDarkMode 
-                            ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
-                        }`}>Enter</kbd>
-                        <span className={`text-sm ${
-                          isDarkMode ? 'text-zinc-200' : 'text-gray-900'
-                        }`}>New Line</span>
-                      </div>
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-zinc-400/70' : 'text-gray-500'
-                      }`}>Create new line (normal behavior)</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <kbd className={`px-3 py-1.5 text-xs rounded-full ${
-                          isDarkMode 
-                            ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
-                        }`}>Click</kbd>
-                        <span className={`text-sm ${
-                          isDarkMode ? 'text-zinc-200' : 'text-gray-900'
-                        }`}>Edit Mode</span>
-                      </div>
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-zinc-400/70' : 'text-gray-500'
-                      }`}>Click preview to return to editing</p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Markdown Syntax Guide */}
-                <section>
-                  <h3 className="text-xl mb-4 flex items-center gap-2" style={{ fontWeight: 500 }}>
-                    📚 Markdown Syntax Guide
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Headings */}
-                    <div>
-                      <h4 className={`mb-2 text-blue-500 ${
-                        isDarkMode ? 'text-blue-400' : 'text-blue-600'
-                      }`} style={{ fontWeight: 500 }}>Headings</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div># Heading 1</div>
-                        <div>## Heading 2</div>
-                        <div>### Heading 3</div>
-                      </div>
-                    </div>
-
-                    {/* Text Formatting */}
-                    <div>
-                      <h4 className={`mb-2 ${
-                        isDarkMode ? 'text-green-400' : 'text-green-600'
-                      }`} style={{ fontWeight: 500 }}>Text Formatting</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div>**bold text**</div>
-                        <div>*italic text*</div>
-                        <div>`inline code`</div>
-                        <div>~~strikethrough~~</div>
-                      </div>
-                    </div>
-
-                    {/* Lists */}
-                    <div>
-                      <h4 className={`mb-2 ${
-                        isDarkMode ? 'text-purple-400' : 'text-purple-600'
-                      }`} style={{ fontWeight: 500 }}>Lists</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div>- Bullet point</div>
-                        <div>- Another item</div>
-                        <div className="mt-2">1. Numbered list</div>
-                        <div>2. Second item</div>
-                      </div>
-                    </div>
-
-                    {/* Links & Images */}
-                    <div>
-                      <h4 className={`mb-2 ${
-                        isDarkMode ? 'text-orange-400' : 'text-orange-600'
-                      }`} style={{ fontWeight: 500 }}>Links & Images</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div>[Link text](https://url.com)</div>
-                        <div>![Image](image-url.jpg)</div>
-                      </div>
-                    </div>
-
-                    {/* Code Blocks */}
-                    <div>
-                      <h4 className={`mb-2 ${
-                        isDarkMode ? 'text-red-400' : 'text-red-600'
-                      }`} style={{ fontWeight: 500 }}>Code Blocks</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div>```javascript</div>
-                        <div>const code = &quot;here&quot;;</div>
-                        <div>```</div>
-                      </div>
-                    </div>
-
-                    {/* Tables */}
-                    <div>
-                      <h4 className={`mb-2 ${
-                        isDarkMode ? 'text-teal-400' : 'text-teal-600'
-                      }`} style={{ fontWeight: 500 }}>Tables</h4>
-                      <div className={`p-3 rounded-lg text-sm font-mono border ${
-                        isDarkMode 
-                          ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
-                      }`}>
-                        <div>| Header | Header |</div>
-                        <div>|--------|--------|</div>
-                        <div>| Cell   | Cell   |</div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Advanced Features */}
-                <section>
-                  <h3 className="text-xl mb-4 flex items-center gap-2" style={{ fontWeight: 500 }}>
-                    🚀 Advanced Features
-                  </h3>
-                  <div className="space-y-4">
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <h4 className="mb-2" style={{ fontWeight: 500 }}>✨ Smart Paste</h4>
-                      <p className={`text-sm ${
-                        isDarkMode ? 'text-zinc-400/80' : 'text-gray-600'
-                      }`}>Paste large Markdown content and it automatically switches to preview mode for instant visualization.</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <h4 className="mb-2" style={{ fontWeight: 500 }}>🎯 Syntax Highlighting</h4>
-                      <p className={`text-sm ${
-                        isDarkMode ? 'text-zinc-400/80' : 'text-gray-600'
-                      }`}>Code blocks automatically get syntax highlighting for better readability.</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <h4 className="mb-2" style={{ fontWeight: 500 }}>📱 Responsive Design</h4>
-                      <p className={`text-sm ${
-                        isDarkMode ? 'text-zinc-400/80' : 'text-gray-600'
-                      }`}>Works perfectly on both desktop and mobile devices with proper text wrapping.</p>
-                    </div>
-                    <div className={`p-4 rounded-lg border shadow-sm ${
-                      isDarkMode 
-                        ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
-                    }`}>
-                      <h4 className="mb-2" style={{ fontWeight: 500 }}>🌙 Theme Support</h4>
-                      <p className={`text-sm ${
-                        isDarkMode ? 'text-zinc-400/80' : 'text-gray-600'
-                      }`}>Automatically adapts to light and dark themes for comfortable viewing.</p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Tips & Tricks */}
-                <section>
-                  <h3 className="text-xl mb-4 flex items-center gap-2" style={{ fontWeight: 500 }}>
-                    💡 Tips & Tricks
-                  </h3>
-                  <div className="space-y-3">
-                    <div className={`p-4 rounded-lg border-l-4 ${
-                      isDarkMode 
-                        ? 'bg-blue-400/10 border-blue-400 text-blue-300' 
-                        : 'bg-blue-50 border-blue-400 text-blue-700'
-                    }`}>
-                      <strong>Tip:</strong> Use the 1.5-second auto-preview to write naturally without interruption.
-                    </div>
-                    <div className={`p-4 rounded-lg border-l-4 ${
-                      isDarkMode 
-                        ? 'bg-green-400/10 border-green-400 text-green-300' 
-                        : 'bg-green-50 border-green-400 text-green-700'
-                    }`}>
-                      <strong>Tip:</strong> Press Escape for instant preview when you want to see results immediately.
-                    </div>
-                    <div className={`p-4 rounded-lg border-l-4 ${
-                      isDarkMode 
-                        ? 'bg-purple-400/10 border-purple-400 text-purple-300' 
-                        : 'bg-purple-50 border-purple-400 text-purple-700'
-                    }`}>
-                      <strong>Tip:</strong> Click anywhere in the preview to continue editing from where you left off.
-                    </div>
-                    <div className={`p-4 rounded-lg border-l-4 ${
-                      isDarkMode 
-                        ? 'bg-orange-400/10 border-orange-400 text-orange-300' 
-                        : 'bg-orange-50 border-orange-400 text-orange-700'
-                    }`}>
-                      <strong>Tip:</strong> Long content automatically scrolls - both in edit and preview modes.
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              {/* Modal Footer */}
-              <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
-                isDarkMode 
-                  ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
-              }`}>
-                <button
-                  onClick={() => setShowHelp(false)}
-                  className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
-                    isDarkMode 
-                      ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
-                  }`}
-                  style={{ fontWeight: 500 }}
-                >
-                  Got it!
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Version History Modal */}
-        {showVersionHistory && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
-            style={{ backgroundColor: isDarkMode ? 'rgba(11, 11, 13, 0.8)' : 'rgba(255, 250, 245, 0.8)' }}
-            onClick={() => setShowVersionHistory(false)}
-          >
-            <div 
-              className={`relative w-full max-w-3xl max-h-[80vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
-                isDarkMode 
-                  ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
-                isDarkMode 
-                  ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
-              }`}>
-                <h2 className="text-xl font-medium" style={{ fontWeight: 500 }}>
-                  Version History
-                </h2>
-                <button
-                  onClick={() => setShowVersionHistory(false)}
-                  className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
-                    isDarkMode 
-                      ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
-                  }`}
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="flex-1 p-6 overflow-y-auto min-h-0" style={{ fontWeight: 500 }}>
-                {versionHistory.length === 0 ? (
-                  <p className={`text-center ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}>
-                    No version history available yet. Start editing the canvas to create history.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {versionHistory.map((entry, index) => {
-                      const date = new Date(entry.timestamp);
-                      const timeString = date.toLocaleTimeString();
-                      const dateString = date.toLocaleDateString();
-                      const preview = entry.value.slice(0, 100) + (entry.value.length > 100 ? '...' : '');
-                      const isCurrent = index === versionHistory.length - 1;
-                      
-                      return (
-                        <div
-                          key={entry.id}
-                          className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                            isDarkMode 
-                              ? `${isCurrent ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.05]'}` 
-                              : `${isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-[#FFF8F0] border-amber-200/50 hover:bg-amber-50'}`
-                          }`}
-                          onClick={() => {
-                            canvasRef.current?.goToVersion(index);
-                            setShowVersionHistory(false);
-                          }}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <span className={`text-sm font-medium ${
-                                isDarkMode ? 'text-zinc-200' : 'text-gray-900'
-                              }`}>
-                                Version {index + 1}
-                                {isCurrent && (
-                                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                                    isDarkMode 
-                                      ? 'bg-blue-500/20 text-blue-300' 
-                                      : 'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    Current
-                                  </span>
-                                )}
-                              </span>
-                              <div className={`text-xs mt-1 ${
-                                isDarkMode ? 'text-zinc-400' : 'text-gray-500'
-                              }`}>
-                                {dateString} at {timeString}
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                canvasRef.current?.goToVersion(index);
-                                setShowVersionHistory(false);
-                              }}
-                              className={`px-3 py-1 text-xs rounded-lg transition-colors ${
-                                isDarkMode 
-                                  ? 'bg-white/10 hover:bg-white/20 text-zinc-200' 
-                                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
-                              }`}
-                            >
-                              Restore
-                            </button>
-                          </div>
-                          {preview && (
-                            <div className={`text-sm mt-2 font-mono ${
-                              isDarkMode ? 'text-zinc-400/70' : 'text-gray-600'
-                            }`}>
-                              {preview}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
-                isDarkMode 
-                  ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
-              }`}>
-                <button
-                  onClick={() => setShowVersionHistory(false)}
-                  className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
-                    isDarkMode 
-                      ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
-                  }`}
-                  style={{ fontWeight: 500 }}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-export default function ChatPage() {
+export default function ChatWithDoc() {
   return (
-    <Layout showNavigation={true} showFooter={false}>
-      <ChatInterface />
+    <Layout showNavigation={true} showFooter={true}>
+      <ChatWithDocContent />
     </Layout>
   );
 }
