@@ -19,14 +19,15 @@ import MarkdownCanvas, { MarkdownCanvasRef } from "@/components/MarkdownCanvas";
 import DocumentDisplay from "@/components/DocumentDisplay";
 import UploadConfirmModal from "@/components/modals/UploadConfirmModal";
 import TypingIndicator from "@/components/TypingIndicator";
+import { Layout, useTheme } from "@/components/Layout";
 
 // NOTE: This is a single-file React component meant to closely replicate the
 // provided screenshot, using Heroicons and Inter (Medium). Tailwind is used for
 // layout/spacing/visuals. Exact pixel parity in every environment is not
 // guaranteed, but spacing, colors, and hierarchy are tuned carefully to match.
 
-export default function ChatGPTReplica() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+function ChatInterface() {
+  const { isDarkMode } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [canvasName, setCanvasName] = useState("New");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -349,17 +350,16 @@ export default function ChatGPTReplica() {
 
   return (
     <div
-      className={`min-h-screen w-full ${isDarkMode ? 'text-white' : 'text-gray-900'} ${isDarkMode ? 'selection:bg-white/10' : 'selection:bg-gray-300'}`}
+      className="min-h-screen w-full"
       style={{
-        // Inter Medium across the app
-        fontFamily:
-          "'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji'",
-        fontWeight: 500,
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-primary)',
+        fontWeight: 'var(--font-weight-regular)',
       }}
     >
-      {/* Import Inter 500 */}
+      {/* Professional styling for chat interface */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap');
         
         @keyframes gradient-shift {
           0%, 100% {
@@ -1523,5 +1523,13 @@ export default function ChatGPTReplica() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Layout showNavigation={true} showFooter={false}>
+      <ChatInterface />
+    </Layout>
   );
 }
