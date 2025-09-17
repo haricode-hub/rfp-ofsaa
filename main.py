@@ -5,7 +5,9 @@ from pydantic import BaseModel
 from docling.document_converter import DocumentConverter
 import tempfile
 import os
+import io
 from services.ai_service import ai_service
+from services.presales import presales_service, ProcessRequest
 
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
@@ -94,6 +96,74 @@ async def chat_with_ai(request: ChatRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# ===============================
+# Presales Agent Endpoints
+# ===============================
+
+@app.post("/presales/upload")
+async def upload_presales_file(file: UploadFile = File(...)):
+    """Upload Excel file for presales RFP analysis"""
+    try:
+        # Validate file type
+        if not file.filename.lower().endswith((".xlsx", ".xls")):
+            raise HTTPException(status_code=400, detail="Only .xlsx and .xls files are supported")
+
+        content = await file.read()
+        result = await presales_service.upload_file(content, file.filename)
+
+        return {
+            "filename": result.filename,
+            "columns": result.columns,
+            "row_count": result.row_count,
+            "original_filename": result.original_filename,
+            "message": "File uploaded successfully for presales analysis"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
+@app.post("/presales/process")
+async def process_presales_data(request: ProcessRequest):
+    """Process Excel data with Oracle banking solution analysis"""
+    try:
+        result = await presales_service.process_excel(request)
+        return {
+            "file_id": result.file_id,
+            "message": result.message,
+            "processing_stats": result.processing_stats,
+            "processing_complete": result.processing_complete
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+@app.get("/presales/download/{file_id}")
+async def download_presales_file(file_id: str):
+    """Download processed presales Excel file"""
+    try:
+        file_content = presales_service.get_processed_file(file_id)
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=presales_analysis.xlsx"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+@app.get("/presales/cache-stats")
+async def get_presales_cache_stats():
+    """Get presales service cache statistics"""
+    return presales_service.get_cache_stats()
+
+@app.post("/presales/clear-cache")
+async def clear_presales_cache():
+    """Clear presales service cache"""
+    return presales_service.clear_cache()
 
 if __name__ == "__main__":
     import uvicorn
