@@ -666,16 +666,15 @@ function ChatInterface() {
                         ) 
                         : ''
                     }`}>
-                      <button 
+                      <button
                         disabled={!documentContent.trim()}
-                        className={`transition-colors ${
-                          !documentContent.trim()
-                            ? 'text-zinc-500/50 cursor-not-allowed'
-                            : (isDarkMode 
-                              ? 'text-zinc-300/90 hover:text-zinc-200' 
-                              : 'text-gray-600 hover:text-gray-800'
-                            )
-                        }`}
+                        className="transition-colors"
+                        style={{
+                          color: !documentContent.trim()
+                            ? 'var(--text-muted)'
+                            : 'var(--blue-primary)',
+                          cursor: !documentContent.trim() ? 'not-allowed' : 'pointer'
+                        }}
                       >
                         <PlusIcon className="h-5 w-5" />
                       </button>
