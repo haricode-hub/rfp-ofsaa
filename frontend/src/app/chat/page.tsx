@@ -558,11 +558,13 @@ function ChatInterface() {
 
           {/* Filename display */}
           {documentFilename && (
-            <div className={`px-3 py-2 rounded-lg text-sm font-medium ${
-              isDarkMode 
-                ? 'bg-white/5 text-zinc-300' 
-                : 'bg-gray-100 text-gray-700'
-            }`}>
+            <div
+              className="px-3 py-2 rounded-lg nav-text"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)'
+              }}
+            >
               <span className={`${
                 !isCanvasMinimized ? 'max-w-[200px] truncate block' : ''
               }`}>
@@ -697,18 +699,16 @@ function ChatInterface() {
                         />
                       </form>
                       {/* Right actions */}
-                      <button 
+                      <button
                         type="button"
                         onClick={handleChatSubmit}
                         disabled={!documentContent.trim() || !chatQuery.trim() || isGenerating}
-                        className={`transition-colors ${
-                          !documentContent.trim() || !chatQuery.trim() || isGenerating
-                            ? 'text-zinc-500/50 cursor-not-allowed'
-                            : (isDarkMode 
-                              ? 'text-zinc-300/90 hover:text-zinc-200' 
-                              : 'text-gray-600 hover:text-gray-800'
-                            )
-                        }`}
+                        className="btn btn-sm p-2"
+                        style={{
+                          backgroundColor: 'var(--blue-primary)',
+                          color: '#FFFFFF',
+                          opacity: (!documentContent.trim() || !chatQuery.trim() || isGenerating) ? 0.5 : 1
+                        }}
                       >
                         <ArrowRightCircleIcon className="h-5 w-5" />
                       </button>
