@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import React from "react";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -18,17 +19,23 @@ export const metadata: Metadata = {
   description: "Streamline your workflow with AI-powered document analysis, Excel processing, and professional document generation tools.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+interface RootLayoutProps {
   children: React.ReactNode;
-}>) {
+}
+
+export default function RootLayout({ children }: Readonly<RootLayoutProps>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body
         className={`${inter.variable} ${geistMono.variable} antialiased`}
+        style={{ fontFamily: 'var(--font-inter)' }}
       >
-        {children}
+        <main>
+          {children}
+        </main>
       </body>
     </html>
   );
