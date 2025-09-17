@@ -10,7 +10,7 @@ RFP OFSAA is a document analysis application with AI-powered chat functionality 
 - **Backend**: FastAPI server with document conversion (via Docling) and OpenAI/OpenRouter integration
 - **Frontend**: Next.js with custom components for document display, text selection, and real-time markdown editing
 - **Document Flow**: Upload → Convert to Markdown → Display → Text Selection → AI Chat → Canvas Integration
-- **Agent Services**: Specialized services for Oracle banking solutions analysis and document generation
+- **FSD Agent**: Functional Specification Document generator with OpenAI GPT and optional vector search
 
 ## Development Commands
 
@@ -89,8 +89,10 @@ src/
 ## Important Implementation Details
 
 ### Environment Configuration
-- **OPENAI_API_KEY**: Required for AI functionality
+- **OPENAI_API_KEY**: Required for AI functionality and FSD agent
 - **OPENROUTER_API_KEY**: Primary API key for AI service
+- **QDRANT_URL**: Optional for FSD agent vector database integration
+- **QDRANT_API_KEY**: Optional for Qdrant vector search capabilities
 - Backend runs on `0.0.0.0:8000`, frontend on `localhost:3000`
 
 ### Document Conversion
@@ -117,6 +119,15 @@ src/
 4. "Move to Canvas" immediately adds text to canvas
 5. Context reference appears above chat input when active
 
+### FSD Agent Architecture
+- **Service Location**: `services/fsd.py` - Comprehensive FSD document generator
+- **Document Generation**: OpenAI GPT-4o-mini for professional specification documents
+- **Token Tracking**: Advanced cost monitoring with detailed usage analytics
+- **Vector Search**: Optional Qdrant integration for Oracle Flexcube documentation
+- **MCP Integration**: Optional Context7 MCP server for enhanced documentation retrieval
+- **Word Output**: Professional .docx generation with TOC, bookmarks, hyperlinks, and styling
+- **Template Structure**: Complete FSD template with 11 sections including traceability tables
+
 ## Testing and Quality
 
 ### Linting Configuration
@@ -128,7 +139,15 @@ src/
 - **Health Check**: `GET /health` for service status
 - **Upload Test**: Use supported file formats via `/upload-document`
 - **Chat Test**: Stream endpoint at `/chat` with query/context
+- **FSD Generation**: Test document creation via `/fsd/generate`
+- **FSD Download**: Test document retrieval via `/fsd/download/{document_id}`
 - **API Documentation**: Available at `http://localhost:8000/docs`
+
+### FSD Agent API Endpoints
+- **POST /fsd/generate**: Generate Functional Specification Document from requirements
+- **GET /fsd/download/{document_id}**: Download generated FSD document (.docx)
+- **GET /fsd/token-usage**: Get detailed token usage and cost statistics
+- **POST /fsd/clear-cache**: Clear document cache and reset session
 
 ## Development Notes
 
