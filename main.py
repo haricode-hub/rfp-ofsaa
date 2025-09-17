@@ -5,7 +5,9 @@ from pydantic import BaseModel
 from docling.document_converter import DocumentConverter
 import tempfile
 import os
+import io
 from services.ai_service import ai_service
+from services.fsd import fsd_service, FSDRequest
 
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
@@ -94,6 +96,56 @@ async def chat_with_ai(request: ChatRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+# ===============================
+# FSD Agent Endpoints
+# ===============================
+
+@app.post("/fsd/generate")
+async def generate_fsd_document(request: FSDRequest):
+    """Generate Functional Specification Document"""
+    try:
+        result = await fsd_service.generate_fsd_document(request)
+
+        if not result.success:
+            raise HTTPException(status_code=500, detail=result.message)
+
+        return {
+            "success": result.success,
+            "message": result.message,
+            "token_usage": result.token_usage,
+            "document_id": result.document_id
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FSD generation error: {str(e)}")
+
+@app.get("/fsd/download/{document_id}")
+async def download_fsd_document(document_id: str):
+    """Download generated FSD document"""
+    try:
+        document_bytes = fsd_service.get_document(document_id)
+
+        return StreamingResponse(
+            io.BytesIO(document_bytes),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": "attachment; filename=fsd_document.docx"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+@app.get("/fsd/token-usage")
+async def get_fsd_token_usage():
+    """Get FSD service token usage statistics"""
+    return fsd_service.get_token_usage_stats()
+
+@app.post("/fsd/clear-cache")
+async def clear_fsd_cache():
+    """Clear FSD service document cache"""
+    return fsd_service.clear_cache()
 
 if __name__ == "__main__":
     import uvicorn
