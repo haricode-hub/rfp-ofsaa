@@ -17,7 +17,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SensAi - AI-Powered Document Processing Platform",
   description: "Streamline your workflow with AI-powered document analysis, Excel processing, and professional document generation tools.",
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 interface RootLayoutProps {
