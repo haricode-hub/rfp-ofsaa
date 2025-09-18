@@ -10,7 +10,7 @@ import os
 import io
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from openai import OpenAI
@@ -20,6 +20,9 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from dotenv import load_dotenv
+import PyPDF2
+import pdfplumber
+from io import BytesIO
 
 # Load environment variables
 load_dotenv()
@@ -85,6 +88,175 @@ class TokenUsageTracker:
             "average_cost_per_document": round(self.total_cost / max(1, len([log for log in self.session_logs if log["operation"] == "FSD_Generation"])), 6)
         }
 
+class DocumentAnalyzer:
+    """Document parsing and analysis service for PDF and DOCX files"""
+
+    def __init__(self, token_tracker: TokenUsageTracker, openai_client: OpenAI):
+        self.token_tracker = token_tracker
+        self.client = openai_client
+
+    def parse_pdf(self, file_bytes: bytes) -> str:
+        """Extract text content from PDF file"""
+        try:
+            # Try pdfplumber first (better text extraction)
+            with pdfplumber.open(BytesIO(file_bytes)) as pdf:
+                text_content = ""
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_content += page_text + "\n"
+
+                if text_content.strip():
+                    return text_content
+
+        except Exception as e:
+            logger.warning(f"pdfplumber failed: {e}, trying PyPDF2")
+
+        # Fallback to PyPDF2
+        try:
+            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+            text_content = ""
+            for page in pdf_reader.pages:
+                text_content += page.extract_text() + "\n"
+            return text_content
+
+        except Exception as e:
+            logger.error(f"PDF parsing failed: {e}")
+            raise ValueError(f"Could not extract text from PDF: {e}")
+
+    def parse_docx(self, file_bytes: bytes) -> str:
+        """Extract text content from DOCX file"""
+        try:
+            doc = Document(BytesIO(file_bytes))
+            text_content = ""
+
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text_content += paragraph.text + "\n"
+
+            # Also extract text from tables
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            text_content += cell.text + "\n"
+
+            return text_content
+
+        except Exception as e:
+            logger.error(f"DOCX parsing failed: {e}")
+            raise ValueError(f"Could not extract text from DOCX: {e}")
+
+    def extract_document_sections(self, content: str) -> Dict[str, str]:
+        """Use AI to identify and extract key sections from document content"""
+
+        prompt = f"""
+        Analyze the following document content and extract key sections that would be relevant for creating a Functional Specification Document (FSD).
+
+        Document Content:
+        {content[:8000]}  # Limit content to avoid token limits
+
+        Please identify and extract the following sections if they exist in the document:
+
+        1. EXECUTIVE_SUMMARY: High-level business overview, objectives, or summary
+        2. BUSINESS_REQUIREMENTS: Business needs, goals, or requirements
+        3. FUNCTIONAL_REQUIREMENTS: Specific functional requirements or features needed
+        4. TECHNICAL_REQUIREMENTS: Technical specifications, constraints, or requirements
+        5. ASSUMPTIONS: Any assumptions mentioned in the document
+        6. CONSTRAINTS: Limitations, constraints, or restrictions mentioned
+        7. SCOPE: Project scope, boundaries, or what's included/excluded
+
+        For each section found, return the relevant content. If a section is not found, return "Not specified in document".
+
+        Format your response as JSON:
+        {{
+            "executive_summary": "extracted content or 'Not specified in document'",
+            "business_requirements": "extracted content or 'Not specified in document'",
+            "functional_requirements": "extracted content or 'Not specified in document'",
+            "technical_requirements": "extracted content or 'Not specified in document'",
+            "assumptions": "extracted content or 'Not specified in document'",
+            "constraints": "extracted content or 'Not specified in document'",
+            "scope": "extracted content or 'Not specified in document'"
+        }}
+        """
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a document analysis expert specializing in extracting structured information for technical documentation. Always respond with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.1
+            )
+
+            # Log token usage
+            if hasattr(response, 'usage') and response.usage:
+                self.token_tracker.log_usage(
+                    "Document_Section_Extraction",
+                    response.usage.prompt_tokens,
+                    response.usage.completion_tokens,
+                    f"Document length: {len(content)} chars"
+                )
+
+            # Parse JSON response
+            import json
+            result = response.choices[0].message.content
+
+            # Clean up response if it contains markdown code blocks
+            if "```json" in result:
+                result = result.split("```json")[1].split("```")[0].strip()
+            elif "```" in result:
+                result = result.split("```")[1].split("```")[0].strip()
+
+            sections = json.loads(result)
+            return sections
+
+        except Exception as e:
+            logger.error(f"Section extraction failed: {e}")
+            # Return fallback structure
+            return {
+                "executive_summary": "Not specified in document",
+                "business_requirements": content[:1000] + "..." if len(content) > 1000 else content,
+                "functional_requirements": "Not specified in document",
+                "technical_requirements": "Not specified in document",
+                "assumptions": "Not specified in document",
+                "constraints": "Not specified in document",
+                "scope": "Not specified in document"
+            }
+
+    def analyze_document(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
+        """Main method to analyze uploaded document and extract structured information"""
+
+        # Determine file type and parse accordingly
+        file_extension = filename.lower().split('.')[-1]
+
+        if file_extension == 'pdf':
+            content = self.parse_pdf(file_bytes)
+        elif file_extension in ['docx', 'doc']:
+            content = self.parse_docx(file_bytes)
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+
+        if not content.strip():
+            raise ValueError("No text content could be extracted from the document")
+
+        # Extract structured sections using AI
+        sections = self.extract_document_sections(content)
+
+        # Return analysis results
+        return {
+            "raw_content": content,
+            "extracted_sections": sections,
+            "file_info": {
+                "filename": filename,
+                "file_type": file_extension,
+                "content_length": len(content),
+                "word_count": len(content.split())
+            }
+        }
+
 class FSDRequest(BaseModel):
     question: str
 
@@ -129,6 +301,10 @@ class FSDAgentService:
 
         self.client = OpenAI(api_key=openai_key)
         logger.info("OpenAI client initialized successfully")
+
+        # Initialize document analyzer
+        self.document_analyzer = DocumentAnalyzer(self.token_tracker, self.client)
+        logger.info("Document analyzer initialized successfully")
 
         # Load a model that generates 896-dimensional vectors (optional)
         self.model = None
