@@ -98,7 +98,7 @@ function HomeContent() {
                 Process Excel files intelligently with AI and automate spreadsheet operations effortlessly.
               </p>
               <Link
-                href="/excelbot"
+                href="/presales"
                 className="inline-flex items-center font-semibold transition-colors"
                 style={{
                   color: 'var(--blue-primary)'
