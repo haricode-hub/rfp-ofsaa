@@ -101,8 +101,8 @@ function FSDGeneratorContent() {
           <div className="max-w-4xl mx-auto">
             {!generatedDoc && !isGenerating && (
               <Card className="p-8">
-                <div className="text-center mb-8">
-                  <ClipboardDocumentListIcon className="h-12 w-12 mx-auto mb-4"
+                <div className="mb-8">
+                  <ClipboardDocumentListIcon className="h-12 w-12 mb-4"
                                             style={{
                                               color: 'var(--blue-primary)'
                                             }} />
