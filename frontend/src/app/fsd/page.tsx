@@ -111,14 +111,32 @@ function FSDGeneratorContent() {
         throw new Error('Failed to generate FSD');
       }
 
-      // Store blob for later download
-      const blob = await response.blob();
+      if (uploadedFile) {
+        // Handle document upload response - get JSON with document_id
+        const result = await response.json();
+        if (result.success && result.document_id) {
+          // Download the actual document using the document_id
+          const downloadResponse = await fetch(`http://localhost:8000/fsd/download/${result.document_id}`);
+          if (!downloadResponse.ok) {
+            throw new Error('Failed to download generated document');
+          }
 
-      // Set state to show success (no auto-download)
-      setGeneratedDoc({
-        filename: 'fsd_document.docx',
-        blob: blob
-      });
+          const blob = await downloadResponse.blob();
+          setGeneratedDoc({
+            filename: 'fsd_document.docx',
+            blob: blob
+          });
+        } else {
+          throw new Error(result.message || 'Failed to generate FSD');
+        }
+      } else {
+        // Handle text-only response - get blob directly
+        const blob = await response.blob();
+        setGeneratedDoc({
+          filename: 'fsd_document.docx',
+          blob: blob
+        });
+      }
     } catch (error) {
       console.error('Generation error:', error);
       alert(`Failed to generate FSD: ${error instanceof Error ? error.message : 'Unknown error'}`);
