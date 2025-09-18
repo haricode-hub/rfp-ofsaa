@@ -9,11 +9,13 @@ import numpy as np
 import os
 import io
 import logging
+import asyncio
 from datetime import datetime
 from typing import Optional, Dict, Any, List, Union
+from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -91,9 +93,10 @@ class TokenUsageTracker:
 class DocumentAnalyzer:
     """Document parsing and analysis service for PDF and DOCX files"""
 
-    def __init__(self, token_tracker: TokenUsageTracker, openai_client: OpenAI):
+    def __init__(self, token_tracker: TokenUsageTracker, openai_client: OpenAI, async_openai_client: AsyncOpenAI):
         self.token_tracker = token_tracker
         self.client = openai_client
+        self.async_client = async_openai_client
 
     def parse_pdf(self, file_bytes: bytes) -> str:
         """Extract text content from PDF file"""
@@ -147,7 +150,7 @@ class DocumentAnalyzer:
             logger.error(f"DOCX parsing failed: {e}")
             raise ValueError(f"Could not extract text from DOCX: {e}")
 
-    def extract_document_sections(self, content: str) -> Dict[str, str]:
+    async def extract_document_sections_async(self, content: str) -> Dict[str, str]:
         """Use AI to identify and extract key sections from document content"""
 
         prompt = f"""
@@ -181,7 +184,7 @@ class DocumentAnalyzer:
         """
 
         try:
-            response = self.client.chat.completions.create(
+            response = await self.async_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a document analysis expert specializing in extracting structured information for technical documentation. Always respond with valid JSON."},
@@ -226,7 +229,7 @@ class DocumentAnalyzer:
                 "scope": "Not specified in document"
             }
 
-    def analyze_document(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
+    async def analyze_document_async(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
         """Main method to analyze uploaded document and extract structured information"""
 
         # Determine file type and parse accordingly
@@ -242,8 +245,8 @@ class DocumentAnalyzer:
         if not content.strip():
             raise ValueError("No text content could be extracted from the document")
 
-        # Extract structured sections using AI
-        sections = self.extract_document_sections(content)
+        # Extract structured sections using async AI
+        sections = await self.extract_document_sections_async(content)
 
         # Return analysis results
         return {
@@ -300,10 +303,11 @@ class FSDAgentService:
             raise EnvironmentError("Missing OPENAI_API_KEY in .env file")
 
         self.client = OpenAI(api_key=openai_key)
-        logger.info("OpenAI client initialized successfully")
+        self.async_client = AsyncOpenAI(api_key=openai_key)
+        logger.info("OpenAI clients initialized successfully")
 
-        # Initialize document analyzer
-        self.document_analyzer = DocumentAnalyzer(self.token_tracker, self.client)
+        # Initialize document analyzer with both sync and async clients
+        self.document_analyzer = DocumentAnalyzer(self.token_tracker, self.client, self.async_client)
         logger.info("Document analyzer initialized successfully")
 
         # Load a model that generates 896-dimensional vectors (optional)
@@ -441,7 +445,7 @@ class FSDAgentService:
             logger.warning(f"Could not retrieve MCP context: {e}")
             return ""
 
-    def generate_document_with_llama(self, function_requirement, qdrant_context="", mcp_context=""):
+    async def generate_document_with_llama_async(self, function_requirement, qdrant_context="", mcp_context=""):
         """Generate document using OpenAI GPT with both Qdrant and MCP context"""
 
         # Combine contexts
@@ -480,7 +484,7 @@ class FSDAgentService:
         Note: Additional sections like Validations, Interface Impact, Migration Impact, etc. will be included in the final document template but do not need to be generated.
         """
 
-        response = self.client.chat.completions.create(
+        response = await self.async_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a professional FSD document specialist with expertise in Oracle banking solutions and technical documentation."},
@@ -511,26 +515,55 @@ class FSDAgentService:
 
         return response.choices[0].message.content
 
-    def generate_function_document(self, function_requirement):
+    async def generate_function_document_async(self, function_requirement):
         """Main method to generate function-specific document using both Qdrant and MCP Context7"""
-        # Step 1: Search vector database for relevant context (optional)
-        qdrant_context = ""
-        if self.qdrant_client:
-            try:
-                vector_search_results = self.search_vector_db(function_requirement)
-                qdrant_context = "\n".join([
-                    result.payload.get('text', '')
-                    for result in vector_search_results
-                    if result.payload and 'text' in result.payload
-                ])
-            except Exception as e:
-                logger.warning(f"Could not search vector database: {e}")
+        # Create tasks for parallel execution
+        tasks = []
 
-        # Step 2: Get MCP Context7 documentation (optional)
-        mcp_context = self.get_mcp_context(function_requirement)
+        # Task 1: Search vector database (if available)
+        async def get_qdrant_context():
+            if self.qdrant_client:
+                try:
+                    # Run vector search in thread pool since it's synchronous
+                    loop = asyncio.get_event_loop()
+                    with ThreadPoolExecutor() as executor:
+                        vector_search_results = await loop.run_in_executor(
+                            executor, self.search_vector_db, function_requirement
+                        )
+                    return "\n".join([
+                        result.payload.get('text', '')
+                        for result in vector_search_results
+                        if result.payload and 'text' in result.payload
+                    ])
+                except Exception as e:
+                    logger.warning(f"Could not search vector database: {e}")
+            return ""
 
-        # Step 3: Generate document using OpenAI with both contexts
-        generated_document = self.generate_document_with_llama(
+        # Task 2: Get MCP context
+        async def get_mcp_context_async():
+            loop = asyncio.get_event_loop()
+            with ThreadPoolExecutor() as executor:
+                return await loop.run_in_executor(
+                    executor, self.get_mcp_context, function_requirement
+                )
+
+        # Execute both context retrieval tasks concurrently
+        qdrant_context, mcp_context = await asyncio.gather(
+            get_qdrant_context(),
+            get_mcp_context_async(),
+            return_exceptions=True
+        )
+
+        # Handle exceptions from gather
+        if isinstance(qdrant_context, Exception):
+            logger.warning(f"Qdrant context failed: {qdrant_context}")
+            qdrant_context = ""
+        if isinstance(mcp_context, Exception):
+            logger.warning(f"MCP context failed: {mcp_context}")
+            mcp_context = ""
+
+        # Generate document using async OpenAI with both contexts
+        generated_document = await self.generate_document_with_llama_async(
             function_requirement,
             qdrant_context,
             mcp_context
@@ -807,11 +840,11 @@ This document addresses the following requirement: {function_requirement[:200]}.
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise ValueError(f"Error generating Word document: {e}")
 
-    def generate_fsd_from_document(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
+    async def generate_fsd_from_document_async(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
         """Generate FSD document from uploaded document with enhanced context"""
 
-        # Step 1: Analyze the uploaded document
-        document_analysis = self.document_analyzer.analyze_document(file_bytes, filename)
+        # Step 1: Analyze the uploaded document asynchronously
+        document_analysis = await self.document_analyzer.analyze_document_async(file_bytes, filename)
         extracted_sections = document_analysis["extracted_sections"]
 
         # Step 2: Create a comprehensive requirement from extracted sections
@@ -838,8 +871,8 @@ This document addresses the following requirement: {function_requirement[:200]}.
         if extracted_sections.get('functional_requirements') and extracted_sections['functional_requirements'] != "Not specified in document":
             mcp_context = self.get_mcp_context(extracted_sections['functional_requirements'])
 
-        # Step 5: Generate enhanced FSD using document context
-        enhanced_content = self._generate_document_enhanced_fsd(
+        # Step 5: Generate enhanced FSD using document context asynchronously
+        enhanced_content = await self._generate_document_enhanced_fsd_async(
             document_analysis,
             combined_requirement,
             qdrant_context,
@@ -879,7 +912,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
 
         return "\n\n".join(parts)
 
-    def _generate_document_enhanced_fsd(self, document_analysis: Dict[str, Any], combined_requirement: str, qdrant_context: str, mcp_context: str) -> str:
+    async def _generate_document_enhanced_fsd_async(self, document_analysis: Dict[str, Any], combined_requirement: str, qdrant_context: str, mcp_context: str) -> str:
         """Generate FSD using document analysis and enhanced context"""
 
         # Combine all contexts
@@ -939,7 +972,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
         Note: Additional sections like Validations, Interface Impact, Migration Impact, etc. will be included in the final document template.
         """
 
-        response = self.client.chat.completions.create(
+        response = await self.async_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a senior FSD specialist with expertise in Oracle banking solutions and document analysis. Create comprehensive, professional functional specifications that address all extracted requirements while leveraging available technical context."},
@@ -976,8 +1009,8 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not request.question.strip():
                 raise ValueError("Question cannot be empty")
 
-            # Generate document content using the advanced logic
-            generated_content = self.generate_function_document(request.question)
+            # Generate document content using async advanced logic
+            generated_content = await self.generate_function_document_async(request.question)
 
             # Create Word document with logo
             logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
@@ -1017,8 +1050,8 @@ This document addresses the following requirement: {function_requirement[:200]}.
     async def generate_fsd_from_document_upload(self, file_bytes: bytes, filename: str, additional_context: str = "") -> FSDResponse:
         """Generate FSD document from uploaded file with enhanced context integration"""
         try:
-            # Generate enhanced content using document analysis
-            generated_content = self.generate_fsd_from_document(file_bytes, filename, additional_context)
+            # Generate enhanced content using async document analysis
+            generated_content = await self.generate_fsd_from_document_async(file_bytes, filename, additional_context)
 
             # Create Word document with logo
             logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
