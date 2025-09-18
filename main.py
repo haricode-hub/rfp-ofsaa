@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -6,9 +6,13 @@ from docling.document_converter import DocumentConverter
 import tempfile
 import os
 import io
+import logging
 from services.ai_service import ai_service
 from services.fsd import fsd_service, FSDRequest
 from services.presales import presales_service, ProcessRequest
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
@@ -142,6 +146,53 @@ async def download_fsd_document(document_id: str):
 async def get_fsd_token_usage():
     """Get FSD service token usage statistics"""
     return fsd_service.get_token_usage_stats()
+
+@app.post("/fsd/generate-from-document")
+async def generate_fsd_from_document(
+    file: UploadFile = File(...),
+    additional_context: str = Form(default="")
+):
+    """Generate FSD document from uploaded PDF/DOCX file with optional additional context"""
+    try:
+        # Validate file type
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+
+        file_extension = file.filename.lower().split('.')[-1]
+        if file_extension not in ['pdf', 'docx', 'doc']:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file type. Only PDF and DOCX files are supported."
+            )
+
+        # Read file content
+        file_content = await file.read()
+        if not file_content:
+            raise HTTPException(status_code=400, detail="File is empty")
+
+        # Generate FSD using the enhanced document analysis
+        result = await fsd_service.generate_fsd_from_document_upload(
+            file_content,
+            file.filename,
+            additional_context
+        )
+
+        if result.success:
+            return {
+                "success": True,
+                "message": result.message,
+                "document_id": result.document_id,
+                "token_usage": result.token_usage,
+                "filename": file.filename
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.message)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in generate_fsd_from_document endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/fsd/clear-cache")
 async def clear_fsd_cache():
