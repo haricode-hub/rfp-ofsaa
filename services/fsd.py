@@ -584,7 +584,7 @@ class FSDAgentService:
         run = paragraph.add_run()
         run.text = ""  # Empty text, just for reference
 
-    def save_as_word(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
+    def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
         try:
             # Create a new Document
@@ -797,6 +797,147 @@ This document addresses the following requirement: {function_requirement[:200]}.
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise ValueError(f"Error generating Word document: {e}")
 
+    def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
+        """Create a clean Word document without complex formatting that could cause corruption"""
+        try:
+            # Create a new Document
+            doc = Document()
+
+            # Add simple header with logo
+            if logo_path and os.path.exists(logo_path):
+                header_paragraph = doc.add_paragraph()
+                header_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                header_run = header_paragraph.add_run()
+                header_run.add_picture(logo_path, width=Inches(1.5), height=Inches(0.9))
+
+                # Add bank name simply
+                bank_name_para = doc.add_paragraph("JMR INFOTECH")
+                bank_name_para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+                bank_name_para2 = doc.add_paragraph("BANK A-LONG")
+                bank_name_para2.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+            # Add spacing
+            doc.add_paragraph()
+
+            # Add document title
+            title_paragraph = doc.add_heading('Functional Specification Document', level=1)
+            title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+            # Add spacing
+            doc.add_paragraph()
+
+            # Add simple Table of Contents
+            toc_heading = doc.add_heading('Table of Contents', level=1)
+
+            # Simple TOC without any complex formatting
+            toc_items = [
+                "1. Introduction",
+                "2. Requirement Overview",
+                "3. Current Functionality",
+                "4. Proposed Functionality",
+                "5. Validations and Error Messages",
+                "6. Interface Impact",
+                "7. Migration Impact",
+                "8. Assumptions",
+                "9. RS-FS Traceability",
+                "10. Open and Closed Queries",
+                "11. Annexure"
+            ]
+
+            for item in toc_items:
+                doc.add_paragraph(item)
+
+            # Page break
+            doc.add_page_break()
+
+            # Parse the generated text and add sections
+            sections = {
+                "1. INTRODUCTION": "",
+                "2. REQUIREMENT OVERVIEW": "",
+                "3. CURRENT FUNCTIONALITY": "",
+                "4. PROPOSED FUNCTIONAL APPROACH": ""
+            }
+
+            # Simple text parsing
+            current_section = None
+            for line in text.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+
+                # Check for section headers
+                for section_title in sections.keys():
+                    section_name = section_title.split(". ")[1]
+                    if section_name.lower() in line.lower():
+                        current_section = section_title
+                        break
+
+                if current_section and line.lower() not in [s.lower() for s in sections.keys()]:
+                    sections[current_section] += line + "\n"
+
+            # Add fallback content if empty
+            if not sections["1. INTRODUCTION"].strip():
+                sections["1. INTRODUCTION"] = f"This FSD outlines requirements for: {function_requirement[:200]}..."
+
+            if not sections["2. REQUIREMENT OVERVIEW"].strip():
+                sections["2. REQUIREMENT OVERVIEW"] = f"Business requirement: {function_requirement}"
+
+            # Add sections to document simply
+            for i, (section_title, content) in enumerate(sections.items(), 1):
+                heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
+
+                if content.strip():
+                    doc.add_paragraph(content)
+                else:
+                    doc.add_paragraph("Content to be added.")
+
+            # Add additional simple sections
+            additional_sections = [
+                ("5. Validations and Error Messages", "NA."),
+                ("6. Interface Impact", "NA."),
+                ("7. Migration Impact", "NA"),
+                ("8. Assumptions", "To be determined."),
+                ("11. Annexure", "To be added as required.")
+            ]
+
+            for title, content in additional_sections:
+                doc.add_heading(title, level=1)
+                doc.add_paragraph(content)
+
+            # Add simple tables without complex formatting
+            doc.add_heading("9. RS-FS Traceability", level=1)
+            table = doc.add_table(rows=2, cols=4)
+            table.style = 'Table Grid'
+
+            headers = ["S. No.", "RS Section", "RS Section Description", "FS Section / Description"]
+            for i, header in enumerate(headers):
+                if i < len(table.rows[0].cells):
+                    table.rows[0].cells[i].text = header
+
+            doc.add_heading("10. Open and Closed Queries", level=1)
+            query_table = doc.add_table(rows=2, cols=6)
+            query_table.style = 'Table Grid'
+
+            query_headers = ["Sr. No", "Issue Details", "Date Raised", "Clarification", "Raised By", "Current Status"]
+            for i, header in enumerate(query_headers):
+                if i < len(query_table.rows[0].cells):
+                    query_table.rows[0].cells[i].text = header
+
+            # Save document
+            doc_buffer = io.BytesIO()
+            doc.save(doc_buffer)
+            doc_buffer.seek(0)
+            document_bytes = doc_buffer.getvalue()
+            doc_buffer.close()
+
+            logger.info(f"Clean Word document created successfully, size: {len(document_bytes)} bytes")
+            return document_bytes
+
+        except Exception as e:
+            logger.error(f"Error generating clean Word document: {e}")
+            raise ValueError(f"Error generating Word document: {e}")
+
     async def generate_fsd_from_document_async(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
         """Generate FSD document from uploaded document with enhanced context"""
 
@@ -974,7 +1115,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not os.path.exists(logo_path):
                 logo_path = None  # Will work without logo
 
-            word_doc_bytes = self.save_as_word(
+            word_doc_bytes = self.save_as_word_simple(
                 generated_content,
                 request.question,
                 logo_path=logo_path
@@ -1020,7 +1161,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if additional_context.strip():
                 base_requirement += f" with additional context: {additional_context[:100]}..."
 
-            word_doc_bytes = self.save_as_word(
+            word_doc_bytes = self.save_as_word_simple(
                 generated_content,
                 base_requirement,
                 logo_path=logo_path
