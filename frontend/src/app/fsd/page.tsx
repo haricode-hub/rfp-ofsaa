@@ -81,31 +81,18 @@ function FSDGeneratorContent() {
       let response;
 
       if (uploadedFile) {
-        // Upload file first, then generate
+        // Generate FSD directly from uploaded file using new endpoint
         const formData = new FormData();
         formData.append('file', uploadedFile);
 
-        const uploadResponse = await fetch('http://localhost:8000/upload-document', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload file');
+        // Add additional context if provided
+        if (requirements.trim()) {
+          formData.append('additional_context', requirements.trim());
         }
 
-        const uploadResult = await uploadResponse.json();
-
-        // Generate FSD with file content
-        response = await fetch('http://localhost:8000/fsd/generate', {
+        response = await fetch('http://localhost:8000/fsd/generate-from-document', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            question: requirements.trim() || `Generate FSD from uploaded document: ${uploadedFile.name}`,
-            context: uploadResult.content
-          })
+          body: formData
         });
       } else {
         // Generate from text only
