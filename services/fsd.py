@@ -187,7 +187,7 @@ class DocumentAnalyzer:
                     {"role": "system", "content": "You are a document analysis expert specializing in extracting structured information for technical documentation. Always respond with valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000,
+                max_tokens=1500,  # Optimized for faster processing
                 temperature=0.1
             )
 
@@ -486,7 +486,7 @@ class FSDAgentService:
                 {"role": "system", "content": "You are a professional FSD document specialist with expertise in Oracle banking solutions and technical documentation."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=2000,
+            max_tokens=1800,  # Optimized for faster processing
             temperature=0.3
         )
 
@@ -945,7 +945,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 {"role": "system", "content": "You are a senior FSD specialist with expertise in Oracle banking solutions and document analysis. Create comprehensive, professional functional specifications that address all extracted requirements while leveraging available technical context."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=3000,
+            max_tokens=2500,  # Optimized for faster processing
             temperature=0.2
         )
 
