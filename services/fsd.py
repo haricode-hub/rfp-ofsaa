@@ -545,7 +545,26 @@ class FSDAgentService:
 
         return generated_document
 
-    # Removed complex bookmark, hyperlink, and page numbering methods to prevent document corruption
+    def _add_safe_bookmark(self, paragraph, bookmark_name):
+        """Add a bookmark to a paragraph using safe XML methods"""
+        try:
+            from docx.oxml.shared import OxmlElement, qn
+            run = paragraph.add_run()
+            tag = run._r
+
+            # Create bookmark start
+            start = OxmlElement('w:bookmarkStart')
+            start.set(qn('w:id'), str(hash(bookmark_name) % 10000))  # Safe ID generation
+            start.set(qn('w:name'), bookmark_name)
+            tag.append(start)
+
+            # Create bookmark end
+            end = OxmlElement('w:bookmarkEnd')
+            end.set(qn('w:id'), str(hash(bookmark_name) % 10000))
+            tag.append(end)
+        except Exception as e:
+            logger.warning(f"Could not add bookmark {bookmark_name}: {e}")
+            # Continue without bookmark if it fails
 
     def save_as_word(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
@@ -553,41 +572,96 @@ class FSDAgentService:
             # Create a new Document
             doc = Document()
 
-            # Add simple title instead of complex logo handling
+            # Create header with logo and bank name in top-right
+            header_paragraph = doc.add_paragraph()
+            header_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+            # Use the JMR logo from project root, fallback to provided logo_path
+            jmr_logo_path = os.path.join(os.path.dirname(__file__), "..", "jmr_logo.png")
+            if os.path.exists(jmr_logo_path):
+                header_run = header_paragraph.add_run()
+                header_run.add_picture(jmr_logo_path, width=Inches(1.5), height=Inches(0.9))
+                # Add bank name below logo
+                bank_name_para = doc.add_paragraph("JMR INFOTECH")
+                bank_name_para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                bank_name_run = bank_name_para.runs[0]
+                bank_name_run.bold = True
+                bank_name_run.font.size = Pt(10)
+
+                bank_name_para2 = doc.add_paragraph("BANK A-LONG")
+                bank_name_para2.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                bank_name_run2 = bank_name_para2.runs[0]
+                bank_name_run2.bold = True
+                bank_name_run2.font.size = Pt(10)
+            elif logo_path and os.path.exists(logo_path):
+                # Fallback to provided logo
+                header_run = header_paragraph.add_run()
+                header_run.add_picture(logo_path, width=Inches(1.5), height=Inches(0.9))
+
+            # Add some spacing
+            doc.add_paragraph()
+
+            # Add document title (center-aligned)
             title_paragraph = doc.add_heading('Functional Specification Document', level=1)
             title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            # Add subtitle
-            subtitle_paragraph = doc.add_paragraph("[Bank Name]")
-            subtitle_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            subtitle_run = subtitle_paragraph.runs[0]
-            subtitle_run.bold = True
-
-            # Add a line break
+            # Add spacing
             doc.add_paragraph()
 
-            # Add simple Table of Contents heading
-            doc.add_heading('Table of Contents', level=1)
+            # Add Table of Contents heading
+            toc_heading = doc.add_heading('Table of Contents', level=1)
+            toc_heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Define simple TOC items without complex hyperlinks
+            # Define TOC items with bookmarks (no duplicate numbering)
             toc_items = [
-                "1. Introduction",
-                "2. Requirement Overview",
-                "3. Current Functionality",
-                "4. Proposed Functionality",
-                "5. Validations and Error Messages",
-                "6. Interface Impact",
-                "7. Migration Impact",
-                "8. Assumptions",
-                "9. RS-FS Traceability",
-                "10. Open and Closed Queries",
-                "11. Annexure"
+                ("Introduction", "intro_bookmark"),
+                ("Requirement Overview", "req_overview_bookmark"),
+                ("Current Functionality", "current_func_bookmark"),
+                ("Proposed Functionality", "proposed_func_bookmark"),
+                ("Validations and Error Messages", "validations_bookmark"),
+                ("Interface Impact", "interface_bookmark"),
+                ("Migration Impact", "migration_bookmark"),
+                ("Assumptions", "assumptions_bookmark"),
+                ("RS-FS Traceability", "traceability_bookmark"),
+                ("Open and Closed Queries", "queries_bookmark"),
+                ("Annexure", "annexure_bookmark")
             ]
 
-            # Add simple TOC entries without complex formatting
-            for item in toc_items:
-                toc_paragraph = doc.add_paragraph(item)
-                toc_paragraph.style = 'List Number'
+            # Add TOC entries with hyperlinks (no auto-numbering)
+            for i, (item_name, bookmark_name) in enumerate(toc_items, 1):
+                toc_paragraph = doc.add_paragraph()
+
+                # Add the number and create hyperlink manually
+                hyperlink_text = f"{i}. {item_name}"
+
+                # Use python-docx built-in hyperlink functionality (safer approach)
+                from docx.oxml.shared import OxmlElement, qn
+
+                # Create hyperlink run
+                hyperlink = OxmlElement('w:hyperlink')
+                hyperlink.set(qn('w:anchor'), bookmark_name)
+
+                new_run = OxmlElement('w:r')
+                rPr = OxmlElement('w:rPr')
+
+                # Style as hyperlink
+                color = OxmlElement('w:color')
+                color.set(qn('w:val'), '0563C1')  # Blue color
+                rPr.append(color)
+
+                underline = OxmlElement('w:u')
+                underline.set(qn('w:val'), 'single')
+                rPr.append(underline)
+
+                new_run.append(rPr)
+
+                # Add text
+                t = OxmlElement('w:t')
+                t.text = hyperlink_text
+                new_run.append(t)
+
+                hyperlink.append(new_run)
+                toc_paragraph._p.append(hyperlink)
 
             # Insert a page break after the Table of Contents
             doc.add_page_break()
@@ -631,12 +705,24 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not sections["2. REQUIREMENT OVERVIEW"].strip():
                 sections["2. REQUIREMENT OVERVIEW"] = f"The business requirement centers around: {function_requirement}"
 
-            # Add each section to the document without complex bookmarks
+            # Map section titles to bookmark names
+            section_bookmarks = {
+                "1. INTRODUCTION": "intro_bookmark",
+                "2. REQUIREMENT OVERVIEW": "req_overview_bookmark",
+                "3. CURRENT FUNCTIONALITY": "current_func_bookmark",
+                "4. PROPOSED FUNCTIONAL APPROACH": "proposed_func_bookmark"
+            }
+
+            # Add each section to the document with bookmarks
             for i, (section_title, content) in enumerate(sections.items(), 1):
-                # Create a simple heading
+                # Create a heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
 
-                # Add content with simple formatting
+                # Add bookmark to this heading using safe method
+                bookmark_name = section_bookmarks.get(section_title, f"section_{i}_bookmark")
+                self._add_safe_bookmark(heading, bookmark_name)
+
+                # Add content with improved formatting
                 if content.strip():
                     paragraph = doc.add_paragraph(content)
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -648,24 +734,26 @@ This document addresses the following requirement: {function_requirement[:200]}.
                     paragraph = doc.add_paragraph("Content to be added.")
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Add additional sections without complex bookmarks
+            # Add additional sections with bookmarks
             additional_sections = [
-                ("5. Validations and Error Messages", "NA."),
-                ("6. Interface Impact", "NA."),
-                ("7. Migration Impact", "NA"),
-                ("8. Assumptions", "To be determined."),
-                ("11. Annexure", "To be added as required.")
+                ("5. Validations and Error Messages", "NA.", "validations_bookmark"),
+                ("6. Interface Impact", "NA.", "interface_bookmark"),
+                ("7. Migration Impact", "NA", "migration_bookmark"),
+                ("8. Assumptions", "To be determined.", "assumptions_bookmark"),
+                ("11. Annexure", "To be added as required.", "annexure_bookmark")
             ]
 
-            for title, content in additional_sections:
+            for title, content, bookmark in additional_sections:
                 heading = doc.add_heading(title, level=1)
+                self._add_safe_bookmark(heading, bookmark)
                 paragraph = doc.add_paragraph(content)
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Add simple RS-FS Traceability section with basic table
+            # Add RS-FS Traceability section with table and bookmark
             heading = doc.add_heading("9. RS-FS Traceability", level=1)
+            self._add_safe_bookmark(heading, "traceability_bookmark")
 
-            # Create simple table for RS-FS Traceability
+            # Create table for RS-FS Traceability
             table = doc.add_table(rows=2, cols=4)
             table.style = 'Table Grid'
 
@@ -675,13 +763,18 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 for i, header in enumerate(headers):
                     if i < len(table.rows[0].cells):
                         table.rows[0].cells[i].text = header
+                        # Make header bold
+                        for paragraph in table.rows[0].cells[i].paragraphs:
+                            for run in paragraph.runs:
+                                run.bold = True
             except Exception as e:
                 logger.warning(f"Issue with traceability table: {e}")
 
-            # Add simple Open and Closed Queries section with basic table
+            # Add Open and Closed Queries section with table and bookmark
             heading = doc.add_heading("10. Open and Closed Queries", level=1)
+            self._add_safe_bookmark(heading, "queries_bookmark")
 
-            # Create simple queries table
+            # Create queries table
             query_table = doc.add_table(rows=2, cols=6)
             query_table.style = 'Table Grid'
 
@@ -691,6 +784,10 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 for i, header in enumerate(query_headers):
                     if i < len(query_table.rows[0].cells):
                         query_table.rows[0].cells[i].text = header
+                        # Make header bold
+                        for paragraph in query_table.rows[0].cells[i].paragraphs:
+                            for run in paragraph.runs:
+                                run.bold = True
             except Exception as e:
                 logger.warning(f"Issue with queries table: {e}")
 
