@@ -11,6 +11,7 @@ RFP OFSAA is a document analysis application with AI-powered chat functionality 
 - **Frontend**: Next.js with custom components for document display, text selection, and real-time markdown editing
 - **Document Flow**: Upload → Convert to Markdown → Display → Text Selection → AI Chat → Canvas Integration
 - **FSD Agent**: Functional Specification Document generator with OpenAI GPT and optional vector search
+- **Presales Agent**: Excel-based RFP analysis for Oracle banking solutions (FLEXCUBE, OFSAA, OBP)
 
 ## Development Commands
 
@@ -69,12 +70,15 @@ bun run start            # Production build
 src/
 ├── app/
 │   ├── page.tsx                 # Main application component
+│   ├── chat/page.tsx           # Chat agent interface
+│   ├── presales/page.tsx       # Presales agent interface
 │   └── layout.tsx              # App layout and metadata
 ├── components/
 │   ├── DocumentDisplay.tsx     # Document viewer with text selection
 │   ├── MarkdownCanvas.tsx      # Smart markdown editor with preview mode
 │   ├── TextSelectionToolbar.tsx # Floating toolbar for selected text
 │   ├── MarkdownRenderer.tsx    # Markdown preview component
+│   ├── ui/Layout.tsx           # Shared layout component
 │   └── modals/                 # Various modal components
 └── hooks/
     └── useHistory.ts           # Canvas history management
@@ -89,10 +93,12 @@ src/
 ## Important Implementation Details
 
 ### Environment Configuration
-- **OPENAI_API_KEY**: Required for AI functionality and FSD agent
+- **OPENAI_API_KEY**: Required for AI functionality and both agents
 - **OPENROUTER_API_KEY**: Primary API key for AI service
 - **QDRANT_URL**: Optional for FSD agent vector database integration
 - **QDRANT_API_KEY**: Optional for Qdrant vector search capabilities
+- **SMITHERY_API_KEY**: Required for presales agent web search capabilities
+- **SMITHERY_PROFILE**: Required for Smithery.ai Exa search configuration
 - Backend runs on `0.0.0.0:8000`, frontend on `localhost:3000`
 
 ### Document Conversion
@@ -128,6 +134,16 @@ src/
 - **Word Output**: Professional .docx generation with TOC, bookmarks, hyperlinks, and styling
 - **Template Structure**: Complete FSD template with 11 sections including traceability tables
 
+### Presales Agent Architecture
+- **Service Location**: `services/presales.py` - Comprehensive Oracle banking RFP analysis
+- **Excel Processing**: Pandas and openpyxl for file handling and styling
+- **Web Search**: Smithery.ai Exa search for Oracle documentation and industry resources
+- **AI Analysis**: OpenAI GPT-4o-mini for evidence-based requirement assessment
+- **Response Types**: Yes/No/Partially/Not Found with professional explanations
+- **Batch Processing**: Concurrent processing with configurable batch sizes
+- **Caching**: Search result caching to optimize performance
+- **Output**: Professionally formatted Excel with enhanced styling and detailed remarks
+
 ## Testing and Quality
 
 ### Linting Configuration
@@ -141,6 +157,8 @@ src/
 - **Chat Test**: Stream endpoint at `/chat` with query/context
 - **FSD Generation**: Test document creation via `/fsd/generate`
 - **FSD Download**: Test document retrieval via `/fsd/download/{document_id}`
+- **Presales Upload**: Upload Excel files via `/presales/upload`
+- **Presales Processing**: Process RFP analysis via `/presales/process`
 - **API Documentation**: Available at `http://localhost:8000/docs`
 
 ### FSD Agent API Endpoints
@@ -148,6 +166,13 @@ src/
 - **GET /fsd/download/{document_id}**: Download generated FSD document (.docx)
 - **GET /fsd/token-usage**: Get detailed token usage and cost statistics
 - **POST /fsd/clear-cache**: Clear document cache and reset session
+
+### Presales Agent API Endpoints
+- **POST /presales/upload**: Upload Excel files (.xlsx, .xls) for RFP analysis
+- **POST /presales/process**: Process Excel data with Oracle banking solution analysis
+- **GET /presales/download/{file_id}**: Download processed RFP analysis results
+- **GET /presales/cache-stats**: Get presales service cache statistics
+- **POST /presales/clear-cache**: Clear presales service cache
 
 ## Development Notes
 
@@ -173,3 +198,8 @@ src/
 - **Monaco Editor**: Code editing component for canvas
 
 When working on this codebase, always test both document upload and AI chat functionality together, as they form the core user workflow.
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
