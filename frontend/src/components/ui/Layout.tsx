@@ -192,7 +192,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <Link
-                  href="/fsd-generator"
+                  href="/fsd"
                   className="nav-link"
                 >
                   FSD Agent

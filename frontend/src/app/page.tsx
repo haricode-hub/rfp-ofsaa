@@ -125,7 +125,7 @@ function HomeContent() {
                 Professional formatting with advanced Word document features.
               </p>
               <Link
-                href="/fsd-generator"
+                href="/fsd"
                 className="inline-flex items-center font-semibold transition-colors"
                 style={{
                   color: 'var(--blue-primary)'
