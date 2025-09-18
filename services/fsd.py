@@ -824,6 +824,169 @@ This document addresses the following requirement: {function_requirement[:200]}.
             logger.error(f"Error generating Word document: {e}")
             raise ValueError(f"Error generating Word document: {e}")
 
+    def generate_fsd_from_document(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
+        """Generate FSD document from uploaded document with enhanced context"""
+
+        # Step 1: Analyze the uploaded document
+        document_analysis = self.document_analyzer.analyze_document(file_bytes, filename)
+        extracted_sections = document_analysis["extracted_sections"]
+
+        # Step 2: Create a comprehensive requirement from extracted sections
+        combined_requirement = self._combine_document_sections(extracted_sections, additional_context)
+
+        # Step 3: Get vector search context based on extracted requirements
+        qdrant_context = ""
+        if self.qdrant_client:
+            try:
+                # Search using business and functional requirements
+                search_query = f"{extracted_sections.get('business_requirements', '')} {extracted_sections.get('functional_requirements', '')}"
+                if search_query.strip() and search_query.strip() != "Not specified in document":
+                    vector_search_results = self.search_vector_db(search_query.strip())
+                    qdrant_context = "\n".join([
+                        result.payload.get('text', '')
+                        for result in vector_search_results
+                        if result.payload and 'text' in result.payload
+                    ])
+            except Exception as e:
+                logger.warning(f"Could not search vector database: {e}")
+
+        # Step 4: Get MCP Context based on requirements
+        mcp_context = ""
+        if extracted_sections.get('functional_requirements') and extracted_sections['functional_requirements'] != "Not specified in document":
+            mcp_context = self.get_mcp_context(extracted_sections['functional_requirements'])
+
+        # Step 5: Generate enhanced FSD using document context
+        enhanced_content = self._generate_document_enhanced_fsd(
+            document_analysis,
+            combined_requirement,
+            qdrant_context,
+            mcp_context
+        )
+
+        return enhanced_content
+
+    def _combine_document_sections(self, sections: Dict[str, str], additional_context: str) -> str:
+        """Combine extracted document sections into a comprehensive requirement"""
+
+        parts = []
+
+        if sections.get('executive_summary') and sections['executive_summary'] != "Not specified in document":
+            parts.append(f"Executive Summary: {sections['executive_summary']}")
+
+        if sections.get('business_requirements') and sections['business_requirements'] != "Not specified in document":
+            parts.append(f"Business Requirements: {sections['business_requirements']}")
+
+        if sections.get('functional_requirements') and sections['functional_requirements'] != "Not specified in document":
+            parts.append(f"Functional Requirements: {sections['functional_requirements']}")
+
+        if sections.get('technical_requirements') and sections['technical_requirements'] != "Not specified in document":
+            parts.append(f"Technical Requirements: {sections['technical_requirements']}")
+
+        if sections.get('scope') and sections['scope'] != "Not specified in document":
+            parts.append(f"Project Scope: {sections['scope']}")
+
+        if sections.get('assumptions') and sections['assumptions'] != "Not specified in document":
+            parts.append(f"Assumptions: {sections['assumptions']}")
+
+        if sections.get('constraints') and sections['constraints'] != "Not specified in document":
+            parts.append(f"Constraints: {sections['constraints']}")
+
+        if additional_context.strip():
+            parts.append(f"Additional Context: {additional_context}")
+
+        return "\n\n".join(parts)
+
+    def _generate_document_enhanced_fsd(self, document_analysis: Dict[str, Any], combined_requirement: str, qdrant_context: str, mcp_context: str) -> str:
+        """Generate FSD using document analysis and enhanced context"""
+
+        # Combine all contexts
+        combined_context = ""
+        if qdrant_context:
+            combined_context += f"Vector Search Context (Oracle Documentation):\n{qdrant_context}\n\n"
+        if mcp_context:
+            combined_context += f"MCP Documentation Context:\n{mcp_context}\n\n"
+
+        # Get file info for context
+        file_info = document_analysis["file_info"]
+        extracted_sections = document_analysis["extracted_sections"]
+
+        prompt = f"""
+        Generate a comprehensive FSD (Functional Specification Document) based on an analyzed uploaded document and enhanced context.
+
+        DOCUMENT ANALYSIS RESULTS:
+        - Source File: {file_info['filename']} ({file_info['file_type'].upper()})
+        - Content Length: {file_info['content_length']} characters, {file_info['word_count']} words
+
+        EXTRACTED REQUIREMENTS:
+        {combined_requirement}
+
+        {combined_context if combined_context else "Additional Context: No additional context available"}
+
+        Create a detailed document with the following structure, leveraging the document analysis and context:
+
+        1. INTRODUCTION
+           - Brief overview integrating the document source and purpose
+           - Reference the uploaded document as the source of requirements
+           - Scope based on extracted information
+
+        2. REQUIREMENT OVERVIEW
+           - Synthesize the business requirements from the document
+           - Clear statement of objectives from executive summary (if available)
+           - Business needs identified in the source document
+
+        3. CURRENT FUNCTIONALITY
+           - Based on vector search context, describe existing system capabilities
+           - How the current system addresses similar requirements
+           - Gap analysis between current state and document requirements
+
+        4. PROPOSED FUNCTIONAL APPROACH
+           - Detailed solution addressing the extracted requirements
+           - Implementation approach combining document needs with context knowledge
+           - Technical approach leveraging Oracle banking domain expertise (if available)
+           - Address specific functional requirements from the document
+
+        Guidelines:
+        - Use the extracted sections to ensure all document requirements are addressed
+        - Leverage vector search context for technical accuracy and existing capabilities
+        - Incorporate MCP context for industry best practices
+        - Be specific about how the solution addresses each requirement category
+        - Reference the source document appropriately throughout
+        - Ensure professional tone and comprehensive coverage
+
+        Note: Additional sections like Validations, Interface Impact, Migration Impact, etc. will be included in the final document template.
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a senior FSD specialist with expertise in Oracle banking solutions and document analysis. Create comprehensive, professional functional specifications that address all extracted requirements while leveraging available technical context."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=3000,
+            temperature=0.2
+        )
+
+        # Log token usage from the completion
+        if hasattr(response, 'usage') and response.usage:
+            self.token_tracker.log_usage(
+                "Document_Based_FSD_Generation",
+                response.usage.prompt_tokens,
+                response.usage.completion_tokens,
+                f"Document: {file_info['filename']}, Qdrant: {len(qdrant_context)} chars, MCP: {len(mcp_context)} chars"
+            )
+        else:
+            # Estimate tokens if usage not available
+            estimated_input = len(prompt.split()) * 1.3
+            estimated_output = len(response.choices[0].message.content.split()) * 1.3
+            self.token_tracker.log_usage(
+                "Document_Based_FSD_Generation",
+                int(estimated_input),
+                int(estimated_output),
+                f"Estimated - Document: {file_info['filename']}"
+            )
+
+        return response.choices[0].message.content
+
     async def generate_fsd_document(self, request: FSDRequest) -> FSDResponse:
         """Generate FSD document from request"""
         try:
@@ -866,6 +1029,52 @@ This document addresses the following requirement: {function_requirement[:200]}.
             return FSDResponse(
                 success=False,
                 message=f"Error generating FSD document: {str(e)}"
+            )
+
+    async def generate_fsd_from_document_upload(self, file_bytes: bytes, filename: str, additional_context: str = "") -> FSDResponse:
+        """Generate FSD document from uploaded file with enhanced context integration"""
+        try:
+            # Generate enhanced content using document analysis
+            generated_content = self.generate_fsd_from_document(file_bytes, filename, additional_context)
+
+            # Create Word document with logo
+            logo_path = os.path.join(os.path.dirname(__file__), "..", "logo.png")
+            if not os.path.exists(logo_path):
+                logo_path = None  # Will work without logo
+
+            # Use the filename as the base requirement for save_as_word
+            base_requirement = f"FSD generated from uploaded document: {filename}"
+            if additional_context.strip():
+                base_requirement += f" with additional context: {additional_context[:100]}..."
+
+            word_doc_bytes = self.save_as_word(
+                generated_content,
+                base_requirement,
+                logo_path=logo_path
+            )
+
+            # Generate unique document ID
+            import uuid
+            doc_id = str(uuid.uuid4())
+
+            # Store document
+            self.generated_documents[doc_id] = word_doc_bytes
+
+            # Get token usage summary
+            token_summary = self.token_tracker.get_session_summary()
+
+            return FSDResponse(
+                success=True,
+                message=f"FSD document generated successfully from {filename}",
+                token_usage=token_summary,
+                document_id=doc_id
+            )
+
+        except Exception as e:
+            logger.error(f"Error generating FSD from document upload: {str(e)}")
+            return FSDResponse(
+                success=False,
+                message=f"Error generating FSD from document: {str(e)}"
             )
 
     def get_document(self, document_id: str) -> bytes:
