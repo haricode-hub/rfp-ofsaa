@@ -183,7 +183,7 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <Link
-                  href="/excelbot"
+                  href="/presales"
                   className="nav-link"
                 >
                   Presales Agent

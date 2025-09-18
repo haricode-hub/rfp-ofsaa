@@ -184,10 +184,10 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <Link
-                  href="/excelbot"
+                  href="/presales"
                   className="nav-link"
                 >
-                  Presale Agent
+                  Presales Agent
                 </Link>
               </li>
               <li>

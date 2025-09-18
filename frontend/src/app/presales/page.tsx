@@ -124,7 +124,7 @@ interface ProcessResponse {
   file_id: string;
 }
 
-function PresaleAgentContent() {
+function PresalesAgentContent() {
   const { isDarkMode } = useTheme();
   const [step, setStep] = useState<'upload' | 'configure' | 'process' | 'download'>('upload');
   const [isUploading, setIsUploading] = useState(false);
@@ -273,7 +273,7 @@ function PresaleAgentContent() {
                 style={{
                   color: 'var(--blue-primary)'
                 }}>
-              Presale Agent - AI Excel Processing
+              Presales Agent - AI Excel Processing
             </h1>
             <p className="text-xl max-w-2xl mx-auto"
                style={{
@@ -678,10 +678,10 @@ function PresaleAgentContent() {
   );
 }
 
-export default function PresaleAgent() {
+export default function PresalesAgent() {
   return (
     <Layout>
-      <PresaleAgentContent />
+      <PresalesAgentContent />
     </Layout>
   );
 }
