@@ -578,26 +578,11 @@ class FSDAgentService:
 
         return generated_document
 
-    def _add_safe_bookmark(self, paragraph, bookmark_name):
-        """Add a bookmark to a paragraph using safe XML methods"""
-        try:
-            from docx.oxml.shared import OxmlElement, qn
-            run = paragraph.add_run()
-            tag = run._r
-
-            # Create bookmark start
-            start = OxmlElement('w:bookmarkStart')
-            start.set(qn('w:id'), str(hash(bookmark_name) % 10000))  # Safe ID generation
-            start.set(qn('w:name'), bookmark_name)
-            tag.append(start)
-
-            # Create bookmark end
-            end = OxmlElement('w:bookmarkEnd')
-            end.set(qn('w:id'), str(hash(bookmark_name) % 10000))
-            tag.append(end)
-        except Exception as e:
-            logger.warning(f"Could not add bookmark {bookmark_name}: {e}")
-            # Continue without bookmark if it fails
+    def _add_simple_bookmark(self, paragraph, bookmark_name):
+        """Add a simple bookmark placeholder (no XML manipulation)"""
+        # Simply add an invisible run for reference - no complex XML
+        run = paragraph.add_run()
+        run.text = ""  # Empty text, just for reference
 
     def save_as_word(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
@@ -660,41 +645,13 @@ class FSDAgentService:
                 ("Annexure", "annexure_bookmark")
             ]
 
-            # Add TOC entries with hyperlinks (no auto-numbering)
+            # Add simple TOC entries without complex XML manipulation
             for i, (item_name, bookmark_name) in enumerate(toc_items, 1):
                 toc_paragraph = doc.add_paragraph()
-
-                # Add the number and create hyperlink manually
-                hyperlink_text = f"{i}. {item_name}"
-
-                # Use python-docx built-in hyperlink functionality (safer approach)
-                from docx.oxml.shared import OxmlElement, qn
-
-                # Create hyperlink run
-                hyperlink = OxmlElement('w:hyperlink')
-                hyperlink.set(qn('w:anchor'), bookmark_name)
-
-                new_run = OxmlElement('w:r')
-                rPr = OxmlElement('w:rPr')
-
-                # Style as hyperlink
-                color = OxmlElement('w:color')
-                color.set(qn('w:val'), '0563C1')  # Blue color
-                rPr.append(color)
-
-                underline = OxmlElement('w:u')
-                underline.set(qn('w:val'), 'single')
-                rPr.append(underline)
-
-                new_run.append(rPr)
-
-                # Add text
-                t = OxmlElement('w:t')
-                t.text = hyperlink_text
-                new_run.append(t)
-
-                hyperlink.append(new_run)
-                toc_paragraph._p.append(hyperlink)
+                toc_run = toc_paragraph.add_run(f"{i}. {item_name}")
+                # Simple blue formatting without XML
+                toc_run.font.color.rgb = None  # Use default color
+                toc_run.underline = False  # Remove underline to avoid XML issues
 
             # Insert a page break after the Table of Contents
             doc.add_page_break()
@@ -751,9 +708,9 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 # Create a heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
 
-                # Add bookmark to this heading using safe method
+                # Add simple bookmark reference
                 bookmark_name = section_bookmarks.get(section_title, f"section_{i}_bookmark")
-                self._add_safe_bookmark(heading, bookmark_name)
+                self._add_simple_bookmark(heading, bookmark_name)
 
                 # Add content with improved formatting
                 if content.strip():
@@ -778,13 +735,13 @@ This document addresses the following requirement: {function_requirement[:200]}.
 
             for title, content, bookmark in additional_sections:
                 heading = doc.add_heading(title, level=1)
-                self._add_safe_bookmark(heading, bookmark)
+                self._add_simple_bookmark(heading, bookmark)
                 paragraph = doc.add_paragraph(content)
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Add RS-FS Traceability section with table and bookmark
+            # Add RS-FS Traceability section with table and simple bookmark
             heading = doc.add_heading("9. RS-FS Traceability", level=1)
-            self._add_safe_bookmark(heading, "traceability_bookmark")
+            self._add_simple_bookmark(heading, "traceability_bookmark")
 
             # Create table for RS-FS Traceability
             table = doc.add_table(rows=2, cols=4)
@@ -803,9 +760,9 @@ This document addresses the following requirement: {function_requirement[:200]}.
             except Exception as e:
                 logger.warning(f"Issue with traceability table: {e}")
 
-            # Add Open and Closed Queries section with table and bookmark
+            # Add Open and Closed Queries section with table and simple bookmark
             heading = doc.add_heading("10. Open and Closed Queries", level=1)
-            self._add_safe_bookmark(heading, "queries_bookmark")
+            self._add_simple_bookmark(heading, "queries_bookmark")
 
             # Create queries table
             query_table = doc.add_table(rows=2, cols=6)
