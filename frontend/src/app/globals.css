@@ -176,12 +176,18 @@ body {
   border-color: var(--blue-primary);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: var(--blue-secondary);
   color: var(--blue-primary);
   border-color: var(--blue-primary);
 }
 
+.btn-secondary:disabled {
+  opacity: 0.5;
+  background-color: var(--bg-primary);
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
 .btn-lg {
   padding: 1rem 2rem;
   font-size: 1.125rem;
