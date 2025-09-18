@@ -576,8 +576,8 @@ class FSDAgentService:
             header_paragraph = doc.add_paragraph()
             header_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
 
-            # Use the JMR logo from project root, fallback to provided logo_path
-            jmr_logo_path = os.path.join(os.path.dirname(__file__), "..", "jmr_logo.png")
+            # Use the JMR logo from src/public directory, fallback to provided logo_path
+            jmr_logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
             if os.path.exists(jmr_logo_path):
                 header_run = header_paragraph.add_run()
                 header_run.add_picture(jmr_logo_path, width=Inches(1.5), height=Inches(0.9))
@@ -980,7 +980,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
             generated_content = self.generate_function_document(request.question)
 
             # Create Word document with logo
-            logo_path = os.path.join(os.path.dirname(__file__), "..", "logo.png")
+            logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
             if not os.path.exists(logo_path):
                 logo_path = None  # Will work without logo
 
@@ -1021,7 +1021,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
             generated_content = self.generate_fsd_from_document(file_bytes, filename, additional_context)
 
             # Create Word document with logo
-            logo_path = os.path.join(os.path.dirname(__file__), "..", "logo.png")
+            logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
             if not os.path.exists(logo_path):
                 logo_path = None  # Will work without logo
 
