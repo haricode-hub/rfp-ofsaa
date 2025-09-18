@@ -545,101 +545,7 @@ class FSDAgentService:
 
         return generated_document
 
-    def add_bookmark(self, paragraph, bookmark_name):
-        """Add a bookmark to a paragraph"""
-        run = paragraph.add_run()
-        tag = run._r
-        start = OxmlElement('w:bookmarkStart')
-        start.set(qn('w:id'), '0')
-        start.set(qn('w:name'), bookmark_name)
-        tag.append(start)
-
-        end = OxmlElement('w:bookmarkEnd')
-        end.set(qn('w:id'), '0')
-        end.set(qn('w:name'), bookmark_name)
-        tag.append(end)
-
-    def add_hyperlink(self, paragraph, text, bookmark_name):
-        """Create a single-click hyperlink to a bookmark in the document"""
-        from docx.oxml.shared import OxmlElement, qn
-
-        # Create the w:hyperlink tag
-        hyperlink = OxmlElement('w:hyperlink')
-        hyperlink.set(qn('w:anchor'), bookmark_name)
-        hyperlink.set(qn('w:history'), '1')
-
-        # Create a new run element
-        new_run = OxmlElement('w:r')
-
-        # Create run properties
-        rPr = OxmlElement('w:rPr')
-
-        # Add color (blue)
-        color = OxmlElement('w:color')
-        color.set(qn('w:val'), '0000FF')
-        rPr.append(color)
-
-        # Add underline
-        underline = OxmlElement('w:u')
-        underline.set(qn('w:val'), 'single')
-        rPr.append(underline)
-
-        # Add "hyperlink" style
-        style = OxmlElement('w:rStyle')
-        style.set(qn('w:val'), 'Hyperlink')
-        rPr.append(style)
-
-        new_run.append(rPr)
-
-        # Add text
-        t = OxmlElement('w:t')
-        t.text = text
-        new_run.append(t)
-
-        hyperlink.append(new_run)
-        paragraph._p.append(hyperlink)
-
-        return hyperlink
-
-    def add_dotted_toc_entry(self, doc, text, bookmark_name, page_number):
-        """Add a Table of Contents entry with dotted line"""
-        paragraph = doc.add_paragraph()
-
-        # Create hyperlink to the bookmark
-        self.add_hyperlink(paragraph, text, bookmark_name)
-
-        # Calculate number of dots
-        dots = "." * (60 - len(text))
-
-        # Add dots
-        paragraph.add_run(" " + dots + " ")
-
-        # Add page number
-        page_run = paragraph.add_run(str(page_number))
-        page_run.bold = True
-
-    def add_page_number(self, doc):
-        """Add page numbers to the document footer"""
-        section = doc.sections[0]
-        footer = section.footer
-        paragraph = footer.paragraphs[0]
-        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-
-        # Add page number field
-        run = paragraph.add_run()
-        field_code = OxmlElement('w:fldChar')
-        field_code.set(qn('w:fldCharType'), 'begin')
-
-        instruction_text = OxmlElement('w:instrText')
-        instruction_text.set(qn('xml:space'), 'preserve')
-        instruction_text.text = 'PAGE'
-
-        field_char = OxmlElement('w:fldChar')
-        field_char.set(qn('w:fldCharType'), 'end')
-
-        run._r.append(field_code)
-        run._r.append(instruction_text)
-        run._r.append(field_char)
+    # Removed complex bookmark, hyperlink, and page numbering methods to prevent document corruption
 
     def save_as_word(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
@@ -647,49 +553,44 @@ class FSDAgentService:
             # Create a new Document
             doc = Document()
 
-            # Add logo image if path is provided
-            if logo_path and os.path.exists(logo_path):
-                try:
-                    paragraph = doc.add_paragraph()
-                    run = paragraph.add_run()
-                    run.add_picture(logo_path, width=Inches(1.77), height=Inches(1.02))
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+            # Add simple title instead of complex logo handling
+            title_paragraph = doc.add_heading('Functional Specification Document', level=1)
+            title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-                    # Add bold title text below the image
-                    title_paragraph = doc.add_paragraph()
-                    title_run = title_paragraph.add_run("Functional Specification Document\n [Bank Name]")
-                    title_run.bold = True
-                    title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                except Exception as e:
-                    logger.warning(f"Could not add logo: {e}")
+            # Add subtitle
+            subtitle_paragraph = doc.add_paragraph("[Bank Name]")
+            subtitle_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            subtitle_run = subtitle_paragraph.runs[0]
+            subtitle_run.bold = True
 
-            # Add Table of Contents heading
+            # Add a line break
+            doc.add_paragraph()
+
+            # Add simple Table of Contents heading
             doc.add_heading('Table of Contents', level=1)
 
-            # Define TOC items and their corresponding bookmarks
+            # Define simple TOC items without complex hyperlinks
             toc_items = [
-                ("1. Introduction", "intro_bookmark"),
-                ("2. Requirement Overview", "req_overview_bookmark"),
-                ("3. Current Functionality", "current_func_bookmark"),
-                ("4. Proposed Functionalty", "proposed_func_bookmark"),
-                ("5. Validations and Error Messages", "validations_bookmark"),
-                ("6. Interface Impact", "interface_bookmark"),
-                ("7. Migration Impact", "migration_bookmark"),
-                ("8. Assumptions", "assumptions_bookmark"),
-                ("9. RS-FS Traceability", "traceability_bookmark"),
-                ("10. Open and Closed Queries", "queries_bookmark"),
-                ("11. Annexure", "annexure_bookmark")
+                "1. Introduction",
+                "2. Requirement Overview",
+                "3. Current Functionality",
+                "4. Proposed Functionality",
+                "5. Validations and Error Messages",
+                "6. Interface Impact",
+                "7. Migration Impact",
+                "8. Assumptions",
+                "9. RS-FS Traceability",
+                "10. Open and Closed Queries",
+                "11. Annexure"
             ]
 
-            # Add TOC entries with hyperlinks
-            for i, (item, bookmark) in enumerate(toc_items):
-                self.add_dotted_toc_entry(doc, item, bookmark, i+1)
+            # Add simple TOC entries without complex formatting
+            for item in toc_items:
+                toc_paragraph = doc.add_paragraph(item)
+                toc_paragraph.style = 'List Number'
 
             # Insert a page break after the Table of Contents
             doc.add_page_break()
-
-            # Add page numbers to the document
-            self.add_page_number(doc)
 
             # Parse the generated text and add core sections
             sections = {
@@ -721,14 +622,6 @@ class FSDAgentService:
                     if not any(title.lower() in line.lower() for title in [t.split(". ")[1].lower() for t in sections.keys()]):
                         sections[current_section] += line + "\n"
 
-            # Map section titles to bookmark names
-            section_bookmarks = {
-                "1. INTRODUCTION": "intro_bookmark",
-                "2. REQUIREMENT OVERVIEW": "req_overview_bookmark",
-                "3. CURRENT FUNCTIONALITY": "current_func_bookmark",
-                "4. PROPOSED FUNCTIONAL APPROACH": "proposed_func_bookmark"
-            }
-
             # Ensure all sections have some content - add fallback content if empty
             if not sections["1. INTRODUCTION"].strip():
                 sections["1. INTRODUCTION"] = f"""This Functional Specification Document (FSD) outlines the requirements and proposed implementation approach for the requested functionality. The document serves as a comprehensive guide for development teams to understand the scope, current state, and proposed changes to the system.
@@ -738,15 +631,12 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not sections["2. REQUIREMENT OVERVIEW"].strip():
                 sections["2. REQUIREMENT OVERVIEW"] = f"The business requirement centers around: {function_requirement}"
 
-            # Add each section to the document with bookmarks
+            # Add each section to the document without complex bookmarks
             for i, (section_title, content) in enumerate(sections.items(), 1):
-                # Create a heading
+                # Create a simple heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
 
-                # Add bookmark to this heading
-                self.add_bookmark(heading, section_bookmarks[section_title])
-
-                # Add content
+                # Add content with simple formatting
                 if content.strip():
                     paragraph = doc.add_paragraph(content)
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -757,60 +647,50 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 else:
                     paragraph = doc.add_paragraph("Content to be added.")
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph_format = paragraph.paragraph_format
-                    paragraph_format.space_before = Pt(6)
-                    paragraph_format.space_after = Pt(6)
-                    paragraph_format.line_spacing = 1.15
 
-            # Add additional sections with bookmarks
+            # Add additional sections without complex bookmarks
             additional_sections = [
-                ("5. Validations and Error Messages", "NA.", "validations_bookmark"),
-                ("6. Interface Impact", "NA.", "interface_bookmark"),
-                ("7. Migration Impact", "NA", "migration_bookmark"),
-                ("8. Assumptions", "To be determined.", "assumptions_bookmark"),
-                ("11. Annexure", "To be added as required.", "annexure_bookmark")
+                ("5. Validations and Error Messages", "NA."),
+                ("6. Interface Impact", "NA."),
+                ("7. Migration Impact", "NA"),
+                ("8. Assumptions", "To be determined."),
+                ("11. Annexure", "To be added as required.")
             ]
 
-            for title, content, bookmark in additional_sections:
+            for title, content in additional_sections:
                 heading = doc.add_heading(title, level=1)
-                self.add_bookmark(heading, bookmark)
-
                 paragraph = doc.add_paragraph(content)
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                paragraph_format = paragraph.paragraph_format
-                paragraph_format.space_before = Pt(6)
-                paragraph_format.space_after = Pt(6)
-                paragraph_format.line_spacing = 1.15
 
-            # Add RS-FS Traceability section with table and bookmark
+            # Add simple RS-FS Traceability section with basic table
             heading = doc.add_heading("9. RS-FS Traceability", level=1)
-            self.add_bookmark(heading, "traceability_bookmark")
 
             # Create simple table for RS-FS Traceability
             table = doc.add_table(rows=2, cols=4)
             table.style = 'Table Grid'
 
-            # Add headers manually
+            # Add headers safely
             try:
                 headers = ["S. No.", "RS Section", "RS Section Description", "FS Section / Description"]
                 for i, header in enumerate(headers):
-                    table.rows[0].cells[i].text = header
+                    if i < len(table.rows[0].cells):
+                        table.rows[0].cells[i].text = header
             except Exception as e:
                 logger.warning(f"Issue with traceability table: {e}")
 
-            # Add Open and Closed Queries section with table and bookmark
+            # Add simple Open and Closed Queries section with basic table
             heading = doc.add_heading("10. Open and Closed Queries", level=1)
-            self.add_bookmark(heading, "queries_bookmark")
 
-            # Create queries table with simple structure
+            # Create simple queries table
             query_table = doc.add_table(rows=2, cols=6)
             query_table.style = 'Table Grid'
 
-            # Add headers manually
+            # Add headers safely
             try:
                 query_headers = ["Sr. No", "Issue Details", "Date Raised", "Clarification", "Raised By", "Current Status"]
                 for i, header in enumerate(query_headers):
-                    query_table.rows[0].cells[i].text = header
+                    if i < len(query_table.rows[0].cells):
+                        query_table.rows[0].cells[i].text = header
             except Exception as e:
                 logger.warning(f"Issue with queries table: {e}")
 
@@ -818,10 +698,16 @@ This document addresses the following requirement: {function_requirement[:200]}.
             doc_buffer = io.BytesIO()
             doc.save(doc_buffer)
             doc_buffer.seek(0)
-            return doc_buffer.getvalue()
+            document_bytes = doc_buffer.getvalue()
+            doc_buffer.close()
+
+            logger.info(f"Word document created successfully, size: {len(document_bytes)} bytes")
+            return document_bytes
 
         except Exception as e:
             logger.error(f"Error generating Word document: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise ValueError(f"Error generating Word document: {e}")
 
     def generate_fsd_from_document(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
