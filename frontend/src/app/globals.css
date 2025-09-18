@@ -1,147 +1,351 @@
+/* Import TailwindCSS v4 */
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "highlight.js/styles/github.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Typography System - Professional Font Variables */
+:root {
+  /* Font Families */
+  --font-primary: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-secondary: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: 0.125rem;
-  --radius-md: 0.25rem;
-  --radius-lg: 0.375rem;
-  --radius-xl: 0.5rem;
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Font Sizes */
+  --font-size-xs: 0.75rem;      /* 12px - small labels */
+  --font-size-sm: 0.875rem;     /* 14px - form text */
+  --font-size-base: 1rem;       /* 16px - body text */
+  --font-size-lg: 1.125rem;     /* 18px - large body */
+  --font-size-xl: 1.25rem;      /* 20px - H3 */
+  --font-size-2xl: 1.5rem;      /* 24px - H2 */
+  --font-size-3xl: 1.875rem;    /* 30px - H2 large */
+  --font-size-4xl: 2.25rem;     /* 36px - H1 */
+  --font-size-5xl: 3rem;        /* 48px - Hero H1 */
+
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+
+  /* Letter Spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
 }
 
+/* Base Typography Styles */
+body {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+/* Professional Blue + White Theme - Refined Color Variables */
 :root {
-  --radius: 0.375rem;
-  --background: #1a1a1a;
-  --foreground: #e5e5e5;
-  --card: #262626;
-  --card-foreground: #e5e5e5;
-  --popover: #262626;
-  --popover-foreground: #e5e5e5;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #333333;
-  --secondary-foreground: #e5e5e5;
-  --muted: #262626;
-  --muted-foreground: #888888;
-  --accent: #333333;
-  --accent-foreground: #e5e5e5;
-  --destructive: #ef4444;
-  --border: #333333;
-  --input: #262626;
-  --ring: #666666;
-  --chart-1: #ffffff;
-  --chart-2: #cccccc;
-  --chart-3: #999999;
-  --chart-4: #666666;
-  --chart-5: #333333;
-  --sidebar: #1f1f1f;
-  --sidebar-foreground: #e5e5e5;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #333333;
-  --sidebar-accent-foreground: #e5e5e5;
-  --sidebar-border: #333333;
-  --sidebar-ring: #666666;
-  --sidebar-muted-foreground: #888888;
+  /* Light Theme - Soft grays with blue accents */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --bg-tertiary: #F3F4F6;
+  --bg-info-panel: #F9FAFB;
+
+  /* Text Colors - Refined Grays */
+  --text-heading: #2563EB; /* blue-600 for headings */
+  --text-primary: #374151; /* gray-700 for body text */
+  --text-secondary: #4B5563; /* gray-600 for navigation/footer */
+  --text-muted: #9CA3AF; /* gray-400 for muted text */
+
+  /* Blue Accents */
+  --blue-primary: #2563EB;
+  --blue-secondary: #DBEAFE;
+  --blue-accent: #1D4ED8;
+  --blue-hover: #1D4ED8;
+  --blue-light: #EFF6FF;
+  --blue-service-title: #2563EB; /* blue-600 for service titles */
+
+  /* Borders - Refined */
+  --border-color: #E5E7EB; /* gray-200 */
+  --border-focus: #60A5FA; /* blue-400 for hover/focus */
+  --border-hover: #60A5FA;
+
+  /* Interactive Elements */
+  --shadow-color: rgba(37, 99, 235, 0.1);
+  --icon-bg: #DBEAFE; /* blue-100 for icon containers */
+  --icon-color: #2563EB; /* blue-600 for icons */
+
+  /* Progress & Tags */
+  --progress-active: #2563EB; /* blue-600 */
+  --progress-inactive-bg: #E5E7EB; /* gray-200 */
+  --progress-inactive-text: #4B5563; /* gray-600 */
+  --tag-selected-bg: #DBEAFE; /* blue-100 */
+  --tag-selected-border: #60A5FA; /* blue-400 */
+  --tag-selected-text: #1D4ED8; /* blue-700 */
+
+  /* Remove buttons and subtle text */
+  --text-remove-button: #6B7280; /* gray-500 */
+  --text-remove-hover: #2563EB; /* blue-600 */
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1a1a1a;
-  --card-foreground: #ffffff;
-  --popover: #1a1a1a;
-  --popover-foreground: #ffffff;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #333333;
-  --secondary-foreground: #ffffff;
-  --muted: #333333;
-  --muted-foreground: #999999;
-  --accent: #333333;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --border: #333333;
-  --input: #1a1a1a;
-  --ring: #ffffff;
-  --chart-1: #ffffff;
-  --chart-2: #cccccc;
-  --chart-3: #999999;
-  --chart-4: #666666;
-  --chart-5: #333333;
-  --sidebar: #1a1a1a;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #333333;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #333333;
-  --sidebar-ring: #ffffff;
-  --sidebar-muted-foreground: #888888;
+  /* Dark Theme - Rich grays with bright blue accents */
+  --bg-primary: #111827;
+  --bg-secondary: #1F2937;
+  --bg-tertiary: #374151;
+  --bg-info-panel: #1F2937; /* gray-800 */
+
+  /* Text Colors - Dark Mode */
+  --text-heading: #A5B4FC; /* indigo-300 for headings - optimal readability and hierarchy */
+  --text-primary: #D1D5DB; /* gray-300 for body text */
+  --text-secondary: #9CA3AF; /* gray-400 for navigation/footer */
+  --text-muted: #6B7280; /* gray-500 for muted text */
+
+  /* Blue Accents - Indigo-Blue mix for optimal dark mode visibility */
+  --blue-primary: #60A5FA; /* blue-400 - main interactive elements */
+  --blue-secondary: #93C5FD; /* blue-300 - secondary text */
+  --blue-accent: #A5B4FC; /* indigo-300 - special accents */
+  --blue-hover: #BFDBFE; /* blue-200 - hover states */
+  --blue-light: #1E40AF; /* blue-800 - backgrounds */
+  --blue-service-title: #A5B4FC; /* indigo-300 for service titles */
+
+  /* Borders - Dark Mode */
+  --border-color: #374151; /* gray-700 */
+  --border-focus: #60A5FA; /* blue-400 */
+  --border-hover: #60A5FA;
+
+  /* Interactive Elements - Dark */
+  --shadow-color: rgba(59, 130, 246, 0.2);
+  --icon-bg: #1E40AF; /* blue-800 for icon containers */
+  --icon-color: #DBEAFE; /* blue-100 for icons - maximum visibility */
+
+  /* Progress & Tags - Dark */
+  --progress-active: #3B82F6; /* blue-500 */
+  --progress-inactive-bg: #374151; /* gray-700 */
+  --progress-inactive-text: #D1D5DB; /* gray-300 */
+  --tag-selected-bg: #1E3A8A; /* blue-900 */
+  --tag-selected-border: #3B82F6; /* blue-600 */
+  --tag-selected-text: #93C5FD; /* blue-300 */
+
+  /* Remove buttons and subtle text - Dark */
+  --text-remove-button: #9CA3AF; /* gray-400 */
+  --text-remove-hover: #93C5FD; /* blue-300 */
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  
-  body {
-    @apply bg-background text-foreground text-sm;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-medium;
-  }
-  
-  h1 {
-    @apply text-lg;
-  }
-  
-  h2 {
-    @apply text-base;
-  }
-  
-  h3, h4, h5, h6 {
-    @apply text-sm;
-  }
-  
-  p, span, div {
-    @apply text-sm leading-relaxed;
-  }
+/* Professional Button Components */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+  text-decoration: none;
+}
+
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--shadow-color);
+}
+
+/* Primary Blue Buttons */
+.btn-primary {
+  background-color: var(--blue-primary);
+  color: #FFFFFF;
+  border-color: var(--blue-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--blue-hover);
+  border-color: var(--blue-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* Secondary Light Blue Buttons */
+.btn-secondary {
+  background-color: var(--bg-primary);
+  color: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--blue-secondary);
+  color: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  background-color: var(--bg-primary);
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Professional Card Components */
+.card {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--shadow-color);
+  border-color: var(--blue-secondary);
+}
+
+/* Professional Navigation */
+.nav-link {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-radius: 0.375rem;
+  color: var(--text-primary);
+}
+
+.nav-link:hover {
+  background-color: var(--blue-secondary);
+  color: var(--blue-primary);
+}
+
+/* Utility Classes */
+.section {
+  padding: 6rem 1rem;
+}
+
+.section-container {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+/* Professional Loading/Animation Classes */
+.spinner {
+  border: 4px solid var(--border-color);
+  border-top: 4px solid var(--blue-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Professional Typography Classes */
+.heading-1 {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text-heading);
+}
+
+.heading-1-hero {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text-heading);
+}
+
+.heading-2 {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--text-heading);
+}
+
+.heading-2-large {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--text-heading);
+}
+
+.heading-3 {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+  color: var(--text-heading);
+}
+
+.body-text {
+  font-family: var(--font-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-relaxed);
+  color: var(--text-primary);
+}
+
+.body-text-large {
+  font-family: var(--font-secondary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-relaxed);
+  color: var(--text-primary);
+}
+
+.service-title {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+  color: var(--blue-service-title);
+}
+
+.nav-text {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  color: var(--text-primary);
+}
+
+.small-text {
+  font-family: var(--font-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--text-muted);
+}
+
+/* Update body background */
+body {
+  font-family: var(--font-primary);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
 }
