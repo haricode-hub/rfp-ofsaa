@@ -374,7 +374,7 @@ async def call_openai(messages: list, max_tokens: int = 600, retry_count: int = 
 # Enhanced Column Value Extraction
 # ===============================
 def extract_column_values(text: str, output_cols: List[str], search_info: Dict[str, Any]) -> Dict[str, str]:
-    """Enhanced column value extraction with response-specific formatting (INCLUDING LINKS)"""
+    """Enhanced column value extraction with response-specific formatting (NO LINKS IN EXCEL)"""
     column_mapping = {
         "RESPONSE": "TENDERER'S RESPONSE",
         "REMARK": "TENDERER'S REMARK",
@@ -460,52 +460,18 @@ def extract_column_values(text: str, output_cols: List[str], search_info: Dict[s
         community_sources = search_info.get("community_sources", 0)
 
         if response_value == "yes":
-            # YES: explanation + detailed reference sources
+            # YES: explanation only (sources shown in terminal only)
             if explanation:
                 results[remark_col] = explanation
             else:
                 results[remark_col] = "Oracle FLEXCUBE provides the required functionality as part of its core banking capabilities."
 
-            # Add reference sources for YES responses
-            if sources:
-                results[remark_col] += f"\n\nReference Sources Consulted:"
-                if oracle_sources > 0:
-                    oracle_urls = [url for url in sources if 'oracle.com' in url.lower()]
-                    oracle_types = [st for url, st in zip(sources, source_types) if 'oracle.com' in url.lower()]
-                    results[remark_col] += f"\nOracle Official Sources:"
-                    for url, st in zip(oracle_urls[:3], oracle_types[:3]):
-                        results[remark_col] += f"\n• [{st}] {url}"
-
-                if community_sources > 0:
-                    community_urls = [url for url in sources if 'oracle.com' not in url.lower()]
-                    community_types = [st for url, st in zip(sources, source_types) if 'oracle.com' not in url.lower()]
-                    results[remark_col] += f"\nIndustry & Technical Sources:"
-                    for url, st in zip(community_urls[:2], community_types[:2]):
-                        results[remark_col] += f"\n• [{st}] {url}"
-
         elif response_value == "partially":
-            # PARTIALLY: explanation + detailed reference sources
+            # PARTIALLY: explanation only (sources shown in terminal only)
             if explanation:
                 results[remark_col] = explanation
             else:
                 results[remark_col] = "Oracle FLEXCUBE provides partial support for this requirement with some limitations or additional configuration needed."
-
-            # Add reference sources for PARTIALLY responses
-            if sources:
-                results[remark_col] += f"\n\nReference Sources Consulted:"
-                if oracle_sources > 0:
-                    oracle_urls = [url for url in sources if 'oracle.com' in url.lower()]
-                    oracle_types = [st for url, st in zip(sources, source_types) if 'oracle.com' in url.lower()]
-                    results[remark_col] += f"\nOracle Official Sources:"
-                    for url, st in zip(oracle_urls[:3], oracle_types[:3]):
-                        results[remark_col] += f"\n• [{st}] {url}"
-
-                if community_sources > 0:
-                    community_urls = [url for url in sources if 'oracle.com' not in url.lower()]
-                    community_types = [st for url, st in zip(sources, source_types) if 'oracle.com' not in url.lower()]
-                    results[remark_col] += f"\nIndustry & Technical Sources:"
-                    for url, st in zip(community_urls[:2], community_types[:2]):
-                        results[remark_col] += f"\n• [{st}] {url}"
 
         elif response_value == "no":
             # NO: explanation only (no links as per original logic)
@@ -884,7 +850,25 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
                     print(f"⏱️  Processing Time: {elapsed:.2f} seconds")
                     print(f"🔍 Total Sources Analyzed: {len(sources)}")
                     print(f"🏆 Evidence Quality: {evidence_strength}")
-                    print(f"📊 FINAL EXTRACTED VALUES:")
+
+                    # Show detailed source breakdown in terminal only
+                    if sources:
+                        print(f"\n🌐 DETAILED SOURCE ANALYSIS (Terminal Only):")
+                        if oracle_sources > 0:
+                            oracle_urls = [url for url in sources if 'oracle.com' in url.lower()]
+                            oracle_types = [st for url, st in zip(sources, source_types) if 'oracle.com' in url.lower()]
+                            print(f"   🏢 Oracle Official Sources ({oracle_sources}):")
+                            for url, st in zip(oracle_urls[:3], oracle_types[:3]):
+                                print(f"      • [{st}] {url}")
+
+                        if community_sources > 0:
+                            community_urls = [url for url in sources if 'oracle.com' not in url.lower()]
+                            community_types = [st for url, st in zip(sources, source_types) if 'oracle.com' not in url.lower()]
+                            print(f"   🌍 Industry & Technical Sources ({community_sources}):")
+                            for url, st in zip(community_urls[:2], community_types[:2]):
+                                print(f"      • [{st}] {url}")
+
+                    print(f"\n📊 FINAL EXTRACTED VALUES (Excel Output):")
                     for col, val in result.items():
                         print(f"\n   📋 {col}:")
                         # Improved display formatting
