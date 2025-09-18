@@ -10,7 +10,7 @@ import os
 import io
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from openai import OpenAI
@@ -20,6 +20,9 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from dotenv import load_dotenv
+import PyPDF2
+import pdfplumber
+from io import BytesIO
 
 # Load environment variables
 load_dotenv()
@@ -85,6 +88,175 @@ class TokenUsageTracker:
             "average_cost_per_document": round(self.total_cost / max(1, len([log for log in self.session_logs if log["operation"] == "FSD_Generation"])), 6)
         }
 
+class DocumentAnalyzer:
+    """Document parsing and analysis service for PDF and DOCX files"""
+
+    def __init__(self, token_tracker: TokenUsageTracker, openai_client: OpenAI):
+        self.token_tracker = token_tracker
+        self.client = openai_client
+
+    def parse_pdf(self, file_bytes: bytes) -> str:
+        """Extract text content from PDF file"""
+        try:
+            # Try pdfplumber first (better text extraction)
+            with pdfplumber.open(BytesIO(file_bytes)) as pdf:
+                text_content = ""
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_content += page_text + "\n"
+
+                if text_content.strip():
+                    return text_content
+
+        except Exception as e:
+            logger.warning(f"pdfplumber failed: {e}, trying PyPDF2")
+
+        # Fallback to PyPDF2
+        try:
+            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+            text_content = ""
+            for page in pdf_reader.pages:
+                text_content += page.extract_text() + "\n"
+            return text_content
+
+        except Exception as e:
+            logger.error(f"PDF parsing failed: {e}")
+            raise ValueError(f"Could not extract text from PDF: {e}")
+
+    def parse_docx(self, file_bytes: bytes) -> str:
+        """Extract text content from DOCX file"""
+        try:
+            doc = Document(BytesIO(file_bytes))
+            text_content = ""
+
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text_content += paragraph.text + "\n"
+
+            # Also extract text from tables
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            text_content += cell.text + "\n"
+
+            return text_content
+
+        except Exception as e:
+            logger.error(f"DOCX parsing failed: {e}")
+            raise ValueError(f"Could not extract text from DOCX: {e}")
+
+    def extract_document_sections(self, content: str) -> Dict[str, str]:
+        """Use AI to identify and extract key sections from document content"""
+
+        prompt = f"""
+        Analyze the following document content and extract key sections that would be relevant for creating a Functional Specification Document (FSD).
+
+        Document Content:
+        {content[:8000]}  # Limit content to avoid token limits
+
+        Please identify and extract the following sections if they exist in the document:
+
+        1. EXECUTIVE_SUMMARY: High-level business overview, objectives, or summary
+        2. BUSINESS_REQUIREMENTS: Business needs, goals, or requirements
+        3. FUNCTIONAL_REQUIREMENTS: Specific functional requirements or features needed
+        4. TECHNICAL_REQUIREMENTS: Technical specifications, constraints, or requirements
+        5. ASSUMPTIONS: Any assumptions mentioned in the document
+        6. CONSTRAINTS: Limitations, constraints, or restrictions mentioned
+        7. SCOPE: Project scope, boundaries, or what's included/excluded
+
+        For each section found, return the relevant content. If a section is not found, return "Not specified in document".
+
+        Format your response as JSON:
+        {{
+            "executive_summary": "extracted content or 'Not specified in document'",
+            "business_requirements": "extracted content or 'Not specified in document'",
+            "functional_requirements": "extracted content or 'Not specified in document'",
+            "technical_requirements": "extracted content or 'Not specified in document'",
+            "assumptions": "extracted content or 'Not specified in document'",
+            "constraints": "extracted content or 'Not specified in document'",
+            "scope": "extracted content or 'Not specified in document'"
+        }}
+        """
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a document analysis expert specializing in extracting structured information for technical documentation. Always respond with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.1
+            )
+
+            # Log token usage
+            if hasattr(response, 'usage') and response.usage:
+                self.token_tracker.log_usage(
+                    "Document_Section_Extraction",
+                    response.usage.prompt_tokens,
+                    response.usage.completion_tokens,
+                    f"Document length: {len(content)} chars"
+                )
+
+            # Parse JSON response
+            import json
+            result = response.choices[0].message.content
+
+            # Clean up response if it contains markdown code blocks
+            if "```json" in result:
+                result = result.split("```json")[1].split("```")[0].strip()
+            elif "```" in result:
+                result = result.split("```")[1].split("```")[0].strip()
+
+            sections = json.loads(result)
+            return sections
+
+        except Exception as e:
+            logger.error(f"Section extraction failed: {e}")
+            # Return fallback structure
+            return {
+                "executive_summary": "Not specified in document",
+                "business_requirements": content[:1000] + "..." if len(content) > 1000 else content,
+                "functional_requirements": "Not specified in document",
+                "technical_requirements": "Not specified in document",
+                "assumptions": "Not specified in document",
+                "constraints": "Not specified in document",
+                "scope": "Not specified in document"
+            }
+
+    def analyze_document(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
+        """Main method to analyze uploaded document and extract structured information"""
+
+        # Determine file type and parse accordingly
+        file_extension = filename.lower().split('.')[-1]
+
+        if file_extension == 'pdf':
+            content = self.parse_pdf(file_bytes)
+        elif file_extension in ['docx', 'doc']:
+            content = self.parse_docx(file_bytes)
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+
+        if not content.strip():
+            raise ValueError("No text content could be extracted from the document")
+
+        # Extract structured sections using AI
+        sections = self.extract_document_sections(content)
+
+        # Return analysis results
+        return {
+            "raw_content": content,
+            "extracted_sections": sections,
+            "file_info": {
+                "filename": filename,
+                "file_type": file_extension,
+                "content_length": len(content),
+                "word_count": len(content.split())
+            }
+        }
+
 class FSDRequest(BaseModel):
     question: str
 
@@ -129,6 +301,10 @@ class FSDAgentService:
 
         self.client = OpenAI(api_key=openai_key)
         logger.info("OpenAI client initialized successfully")
+
+        # Initialize document analyzer
+        self.document_analyzer = DocumentAnalyzer(self.token_tracker, self.client)
+        logger.info("Document analyzer initialized successfully")
 
         # Load a model that generates 896-dimensional vectors (optional)
         self.model = None
@@ -369,101 +545,7 @@ class FSDAgentService:
 
         return generated_document
 
-    def add_bookmark(self, paragraph, bookmark_name):
-        """Add a bookmark to a paragraph"""
-        run = paragraph.add_run()
-        tag = run._r
-        start = OxmlElement('w:bookmarkStart')
-        start.set(qn('w:id'), '0')
-        start.set(qn('w:name'), bookmark_name)
-        tag.append(start)
-
-        end = OxmlElement('w:bookmarkEnd')
-        end.set(qn('w:id'), '0')
-        end.set(qn('w:name'), bookmark_name)
-        tag.append(end)
-
-    def add_hyperlink(self, paragraph, text, bookmark_name):
-        """Create a single-click hyperlink to a bookmark in the document"""
-        from docx.oxml.shared import OxmlElement, qn
-
-        # Create the w:hyperlink tag
-        hyperlink = OxmlElement('w:hyperlink')
-        hyperlink.set(qn('w:anchor'), bookmark_name)
-        hyperlink.set(qn('w:history'), '1')
-
-        # Create a new run element
-        new_run = OxmlElement('w:r')
-
-        # Create run properties
-        rPr = OxmlElement('w:rPr')
-
-        # Add color (blue)
-        color = OxmlElement('w:color')
-        color.set(qn('w:val'), '0000FF')
-        rPr.append(color)
-
-        # Add underline
-        underline = OxmlElement('w:u')
-        underline.set(qn('w:val'), 'single')
-        rPr.append(underline)
-
-        # Add "hyperlink" style
-        style = OxmlElement('w:rStyle')
-        style.set(qn('w:val'), 'Hyperlink')
-        rPr.append(style)
-
-        new_run.append(rPr)
-
-        # Add text
-        t = OxmlElement('w:t')
-        t.text = text
-        new_run.append(t)
-
-        hyperlink.append(new_run)
-        paragraph._p.append(hyperlink)
-
-        return hyperlink
-
-    def add_dotted_toc_entry(self, doc, text, bookmark_name, page_number):
-        """Add a Table of Contents entry with dotted line"""
-        paragraph = doc.add_paragraph()
-
-        # Create hyperlink to the bookmark
-        self.add_hyperlink(paragraph, text, bookmark_name)
-
-        # Calculate number of dots
-        dots = "." * (60 - len(text))
-
-        # Add dots
-        paragraph.add_run(" " + dots + " ")
-
-        # Add page number
-        page_run = paragraph.add_run(str(page_number))
-        page_run.bold = True
-
-    def add_page_number(self, doc):
-        """Add page numbers to the document footer"""
-        section = doc.sections[0]
-        footer = section.footer
-        paragraph = footer.paragraphs[0]
-        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-
-        # Add page number field
-        run = paragraph.add_run()
-        field_code = OxmlElement('w:fldChar')
-        field_code.set(qn('w:fldCharType'), 'begin')
-
-        instruction_text = OxmlElement('w:instrText')
-        instruction_text.set(qn('xml:space'), 'preserve')
-        instruction_text.text = 'PAGE'
-
-        field_char = OxmlElement('w:fldChar')
-        field_char.set(qn('w:fldCharType'), 'end')
-
-        run._r.append(field_code)
-        run._r.append(instruction_text)
-        run._r.append(field_char)
+    # Removed complex bookmark, hyperlink, and page numbering methods to prevent document corruption
 
     def save_as_word(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
@@ -471,49 +553,44 @@ class FSDAgentService:
             # Create a new Document
             doc = Document()
 
-            # Add logo image if path is provided
-            if logo_path and os.path.exists(logo_path):
-                try:
-                    paragraph = doc.add_paragraph()
-                    run = paragraph.add_run()
-                    run.add_picture(logo_path, width=Inches(1.77), height=Inches(1.02))
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+            # Add simple title instead of complex logo handling
+            title_paragraph = doc.add_heading('Functional Specification Document', level=1)
+            title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-                    # Add bold title text below the image
-                    title_paragraph = doc.add_paragraph()
-                    title_run = title_paragraph.add_run("Functional Specification Document\n [Bank Name]")
-                    title_run.bold = True
-                    title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                except Exception as e:
-                    logger.warning(f"Could not add logo: {e}")
+            # Add subtitle
+            subtitle_paragraph = doc.add_paragraph("[Bank Name]")
+            subtitle_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            subtitle_run = subtitle_paragraph.runs[0]
+            subtitle_run.bold = True
 
-            # Add Table of Contents heading
+            # Add a line break
+            doc.add_paragraph()
+
+            # Add simple Table of Contents heading
             doc.add_heading('Table of Contents', level=1)
 
-            # Define TOC items and their corresponding bookmarks
+            # Define simple TOC items without complex hyperlinks
             toc_items = [
-                ("1. Introduction", "intro_bookmark"),
-                ("2. Requirement Overview", "req_overview_bookmark"),
-                ("3. Current Functionality", "current_func_bookmark"),
-                ("4. Proposed Functionalty", "proposed_func_bookmark"),
-                ("5. Validations and Error Messages", "validations_bookmark"),
-                ("6. Interface Impact", "interface_bookmark"),
-                ("7. Migration Impact", "migration_bookmark"),
-                ("8. Assumptions", "assumptions_bookmark"),
-                ("9. RS-FS Traceability", "traceability_bookmark"),
-                ("10. Open and Closed Queries", "queries_bookmark"),
-                ("11. Annexure", "annexure_bookmark")
+                "1. Introduction",
+                "2. Requirement Overview",
+                "3. Current Functionality",
+                "4. Proposed Functionality",
+                "5. Validations and Error Messages",
+                "6. Interface Impact",
+                "7. Migration Impact",
+                "8. Assumptions",
+                "9. RS-FS Traceability",
+                "10. Open and Closed Queries",
+                "11. Annexure"
             ]
 
-            # Add TOC entries with hyperlinks
-            for i, (item, bookmark) in enumerate(toc_items):
-                self.add_dotted_toc_entry(doc, item, bookmark, i+1)
+            # Add simple TOC entries without complex formatting
+            for item in toc_items:
+                toc_paragraph = doc.add_paragraph(item)
+                toc_paragraph.style = 'List Number'
 
             # Insert a page break after the Table of Contents
             doc.add_page_break()
-
-            # Add page numbers to the document
-            self.add_page_number(doc)
 
             # Parse the generated text and add core sections
             sections = {
@@ -545,14 +622,6 @@ class FSDAgentService:
                     if not any(title.lower() in line.lower() for title in [t.split(". ")[1].lower() for t in sections.keys()]):
                         sections[current_section] += line + "\n"
 
-            # Map section titles to bookmark names
-            section_bookmarks = {
-                "1. INTRODUCTION": "intro_bookmark",
-                "2. REQUIREMENT OVERVIEW": "req_overview_bookmark",
-                "3. CURRENT FUNCTIONALITY": "current_func_bookmark",
-                "4. PROPOSED FUNCTIONAL APPROACH": "proposed_func_bookmark"
-            }
-
             # Ensure all sections have some content - add fallback content if empty
             if not sections["1. INTRODUCTION"].strip():
                 sections["1. INTRODUCTION"] = f"""This Functional Specification Document (FSD) outlines the requirements and proposed implementation approach for the requested functionality. The document serves as a comprehensive guide for development teams to understand the scope, current state, and proposed changes to the system.
@@ -562,15 +631,12 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not sections["2. REQUIREMENT OVERVIEW"].strip():
                 sections["2. REQUIREMENT OVERVIEW"] = f"The business requirement centers around: {function_requirement}"
 
-            # Add each section to the document with bookmarks
+            # Add each section to the document without complex bookmarks
             for i, (section_title, content) in enumerate(sections.items(), 1):
-                # Create a heading
+                # Create a simple heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
 
-                # Add bookmark to this heading
-                self.add_bookmark(heading, section_bookmarks[section_title])
-
-                # Add content
+                # Add content with simple formatting
                 if content.strip():
                     paragraph = doc.add_paragraph(content)
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -581,60 +647,50 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 else:
                     paragraph = doc.add_paragraph("Content to be added.")
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph_format = paragraph.paragraph_format
-                    paragraph_format.space_before = Pt(6)
-                    paragraph_format.space_after = Pt(6)
-                    paragraph_format.line_spacing = 1.15
 
-            # Add additional sections with bookmarks
+            # Add additional sections without complex bookmarks
             additional_sections = [
-                ("5. Validations and Error Messages", "NA.", "validations_bookmark"),
-                ("6. Interface Impact", "NA.", "interface_bookmark"),
-                ("7. Migration Impact", "NA", "migration_bookmark"),
-                ("8. Assumptions", "To be determined.", "assumptions_bookmark"),
-                ("11. Annexure", "To be added as required.", "annexure_bookmark")
+                ("5. Validations and Error Messages", "NA."),
+                ("6. Interface Impact", "NA."),
+                ("7. Migration Impact", "NA"),
+                ("8. Assumptions", "To be determined."),
+                ("11. Annexure", "To be added as required.")
             ]
 
-            for title, content, bookmark in additional_sections:
+            for title, content in additional_sections:
                 heading = doc.add_heading(title, level=1)
-                self.add_bookmark(heading, bookmark)
-
                 paragraph = doc.add_paragraph(content)
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                paragraph_format = paragraph.paragraph_format
-                paragraph_format.space_before = Pt(6)
-                paragraph_format.space_after = Pt(6)
-                paragraph_format.line_spacing = 1.15
 
-            # Add RS-FS Traceability section with table and bookmark
+            # Add simple RS-FS Traceability section with basic table
             heading = doc.add_heading("9. RS-FS Traceability", level=1)
-            self.add_bookmark(heading, "traceability_bookmark")
 
             # Create simple table for RS-FS Traceability
             table = doc.add_table(rows=2, cols=4)
             table.style = 'Table Grid'
 
-            # Add headers manually
+            # Add headers safely
             try:
                 headers = ["S. No.", "RS Section", "RS Section Description", "FS Section / Description"]
                 for i, header in enumerate(headers):
-                    table.rows[0].cells[i].text = header
+                    if i < len(table.rows[0].cells):
+                        table.rows[0].cells[i].text = header
             except Exception as e:
                 logger.warning(f"Issue with traceability table: {e}")
 
-            # Add Open and Closed Queries section with table and bookmark
+            # Add simple Open and Closed Queries section with basic table
             heading = doc.add_heading("10. Open and Closed Queries", level=1)
-            self.add_bookmark(heading, "queries_bookmark")
 
-            # Create queries table with simple structure
+            # Create simple queries table
             query_table = doc.add_table(rows=2, cols=6)
             query_table.style = 'Table Grid'
 
-            # Add headers manually
+            # Add headers safely
             try:
                 query_headers = ["Sr. No", "Issue Details", "Date Raised", "Clarification", "Raised By", "Current Status"]
                 for i, header in enumerate(query_headers):
-                    query_table.rows[0].cells[i].text = header
+                    if i < len(query_table.rows[0].cells):
+                        query_table.rows[0].cells[i].text = header
             except Exception as e:
                 logger.warning(f"Issue with queries table: {e}")
 
@@ -642,11 +698,180 @@ This document addresses the following requirement: {function_requirement[:200]}.
             doc_buffer = io.BytesIO()
             doc.save(doc_buffer)
             doc_buffer.seek(0)
-            return doc_buffer.getvalue()
+            document_bytes = doc_buffer.getvalue()
+            doc_buffer.close()
+
+            logger.info(f"Word document created successfully, size: {len(document_bytes)} bytes")
+            return document_bytes
 
         except Exception as e:
             logger.error(f"Error generating Word document: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise ValueError(f"Error generating Word document: {e}")
+
+    def generate_fsd_from_document(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
+        """Generate FSD document from uploaded document with enhanced context"""
+
+        # Step 1: Analyze the uploaded document
+        document_analysis = self.document_analyzer.analyze_document(file_bytes, filename)
+        extracted_sections = document_analysis["extracted_sections"]
+
+        # Step 2: Create a comprehensive requirement from extracted sections
+        combined_requirement = self._combine_document_sections(extracted_sections, additional_context)
+
+        # Step 3: Get vector search context based on extracted requirements
+        qdrant_context = ""
+        if self.qdrant_client:
+            try:
+                # Search using business and functional requirements
+                search_query = f"{extracted_sections.get('business_requirements', '')} {extracted_sections.get('functional_requirements', '')}"
+                if search_query.strip() and search_query.strip() != "Not specified in document":
+                    vector_search_results = self.search_vector_db(search_query.strip())
+                    qdrant_context = "\n".join([
+                        result.payload.get('text', '')
+                        for result in vector_search_results
+                        if result.payload and 'text' in result.payload
+                    ])
+            except Exception as e:
+                logger.warning(f"Could not search vector database: {e}")
+
+        # Step 4: Get MCP Context based on requirements
+        mcp_context = ""
+        if extracted_sections.get('functional_requirements') and extracted_sections['functional_requirements'] != "Not specified in document":
+            mcp_context = self.get_mcp_context(extracted_sections['functional_requirements'])
+
+        # Step 5: Generate enhanced FSD using document context
+        enhanced_content = self._generate_document_enhanced_fsd(
+            document_analysis,
+            combined_requirement,
+            qdrant_context,
+            mcp_context
+        )
+
+        return enhanced_content
+
+    def _combine_document_sections(self, sections: Dict[str, str], additional_context: str) -> str:
+        """Combine extracted document sections into a comprehensive requirement"""
+
+        parts = []
+
+        if sections.get('executive_summary') and sections['executive_summary'] != "Not specified in document":
+            parts.append(f"Executive Summary: {sections['executive_summary']}")
+
+        if sections.get('business_requirements') and sections['business_requirements'] != "Not specified in document":
+            parts.append(f"Business Requirements: {sections['business_requirements']}")
+
+        if sections.get('functional_requirements') and sections['functional_requirements'] != "Not specified in document":
+            parts.append(f"Functional Requirements: {sections['functional_requirements']}")
+
+        if sections.get('technical_requirements') and sections['technical_requirements'] != "Not specified in document":
+            parts.append(f"Technical Requirements: {sections['technical_requirements']}")
+
+        if sections.get('scope') and sections['scope'] != "Not specified in document":
+            parts.append(f"Project Scope: {sections['scope']}")
+
+        if sections.get('assumptions') and sections['assumptions'] != "Not specified in document":
+            parts.append(f"Assumptions: {sections['assumptions']}")
+
+        if sections.get('constraints') and sections['constraints'] != "Not specified in document":
+            parts.append(f"Constraints: {sections['constraints']}")
+
+        if additional_context.strip():
+            parts.append(f"Additional Context: {additional_context}")
+
+        return "\n\n".join(parts)
+
+    def _generate_document_enhanced_fsd(self, document_analysis: Dict[str, Any], combined_requirement: str, qdrant_context: str, mcp_context: str) -> str:
+        """Generate FSD using document analysis and enhanced context"""
+
+        # Combine all contexts
+        combined_context = ""
+        if qdrant_context:
+            combined_context += f"Vector Search Context (Oracle Documentation):\n{qdrant_context}\n\n"
+        if mcp_context:
+            combined_context += f"MCP Documentation Context:\n{mcp_context}\n\n"
+
+        # Get file info for context
+        file_info = document_analysis["file_info"]
+        extracted_sections = document_analysis["extracted_sections"]
+
+        prompt = f"""
+        Generate a comprehensive FSD (Functional Specification Document) based on an analyzed uploaded document and enhanced context.
+
+        DOCUMENT ANALYSIS RESULTS:
+        - Source File: {file_info['filename']} ({file_info['file_type'].upper()})
+        - Content Length: {file_info['content_length']} characters, {file_info['word_count']} words
+
+        EXTRACTED REQUIREMENTS:
+        {combined_requirement}
+
+        {combined_context if combined_context else "Additional Context: No additional context available"}
+
+        Create a detailed document with the following structure, leveraging the document analysis and context:
+
+        1. INTRODUCTION
+           - Brief overview integrating the document source and purpose
+           - Reference the uploaded document as the source of requirements
+           - Scope based on extracted information
+
+        2. REQUIREMENT OVERVIEW
+           - Synthesize the business requirements from the document
+           - Clear statement of objectives from executive summary (if available)
+           - Business needs identified in the source document
+
+        3. CURRENT FUNCTIONALITY
+           - Based on vector search context, describe existing system capabilities
+           - How the current system addresses similar requirements
+           - Gap analysis between current state and document requirements
+
+        4. PROPOSED FUNCTIONAL APPROACH
+           - Detailed solution addressing the extracted requirements
+           - Implementation approach combining document needs with context knowledge
+           - Technical approach leveraging Oracle banking domain expertise (if available)
+           - Address specific functional requirements from the document
+
+        Guidelines:
+        - Use the extracted sections to ensure all document requirements are addressed
+        - Leverage vector search context for technical accuracy and existing capabilities
+        - Incorporate MCP context for industry best practices
+        - Be specific about how the solution addresses each requirement category
+        - Reference the source document appropriately throughout
+        - Ensure professional tone and comprehensive coverage
+
+        Note: Additional sections like Validations, Interface Impact, Migration Impact, etc. will be included in the final document template.
+        """
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a senior FSD specialist with expertise in Oracle banking solutions and document analysis. Create comprehensive, professional functional specifications that address all extracted requirements while leveraging available technical context."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=3000,
+            temperature=0.2
+        )
+
+        # Log token usage from the completion
+        if hasattr(response, 'usage') and response.usage:
+            self.token_tracker.log_usage(
+                "Document_Based_FSD_Generation",
+                response.usage.prompt_tokens,
+                response.usage.completion_tokens,
+                f"Document: {file_info['filename']}, Qdrant: {len(qdrant_context)} chars, MCP: {len(mcp_context)} chars"
+            )
+        else:
+            # Estimate tokens if usage not available
+            estimated_input = len(prompt.split()) * 1.3
+            estimated_output = len(response.choices[0].message.content.split()) * 1.3
+            self.token_tracker.log_usage(
+                "Document_Based_FSD_Generation",
+                int(estimated_input),
+                int(estimated_output),
+                f"Estimated - Document: {file_info['filename']}"
+            )
+
+        return response.choices[0].message.content
 
     async def generate_fsd_document(self, request: FSDRequest) -> FSDResponse:
         """Generate FSD document from request"""
@@ -690,6 +915,52 @@ This document addresses the following requirement: {function_requirement[:200]}.
             return FSDResponse(
                 success=False,
                 message=f"Error generating FSD document: {str(e)}"
+            )
+
+    async def generate_fsd_from_document_upload(self, file_bytes: bytes, filename: str, additional_context: str = "") -> FSDResponse:
+        """Generate FSD document from uploaded file with enhanced context integration"""
+        try:
+            # Generate enhanced content using document analysis
+            generated_content = self.generate_fsd_from_document(file_bytes, filename, additional_context)
+
+            # Create Word document with logo
+            logo_path = os.path.join(os.path.dirname(__file__), "..", "logo.png")
+            if not os.path.exists(logo_path):
+                logo_path = None  # Will work without logo
+
+            # Use the filename as the base requirement for save_as_word
+            base_requirement = f"FSD generated from uploaded document: {filename}"
+            if additional_context.strip():
+                base_requirement += f" with additional context: {additional_context[:100]}..."
+
+            word_doc_bytes = self.save_as_word(
+                generated_content,
+                base_requirement,
+                logo_path=logo_path
+            )
+
+            # Generate unique document ID
+            import uuid
+            doc_id = str(uuid.uuid4())
+
+            # Store document
+            self.generated_documents[doc_id] = word_doc_bytes
+
+            # Get token usage summary
+            token_summary = self.token_tracker.get_session_summary()
+
+            return FSDResponse(
+                success=True,
+                message=f"FSD document generated successfully from {filename}",
+                token_usage=token_summary,
+                document_id=doc_id
+            )
+
+        except Exception as e:
+            logger.error(f"Error generating FSD from document upload: {str(e)}")
+            return FSDResponse(
+                success=False,
+                message=f"Error generating FSD from document: {str(e)}"
             )
 
     def get_document(self, document_id: str) -> bytes:
