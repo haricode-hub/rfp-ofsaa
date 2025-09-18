@@ -39,11 +39,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise EnvironmentError("Missing OPENAI_API_KEY in .env file")
 
-# Initialize OpenAI client with optimized settings
+# Initialize OpenAI client with speed-optimized settings
 client = AsyncOpenAI(
     api_key=OPENAI_API_KEY,
-    max_retries=3,
-    timeout=30.0
+    max_retries=2,  # Reduced retries for faster failure recovery
+    timeout=15.0    # Reduced timeout for faster response
 )
 
 # Smithery.ai Exa Search configuration
@@ -58,11 +58,11 @@ EXA_TOOL = "web_search_exa"
 # Optimized model selection
 MODEL_NAME = "gpt-4o-mini"
 
-# Performance configurations
-MAX_CONCURRENT_REQUESTS = 10
-BATCH_SIZE = 5
-RATE_LIMIT_DELAY = 0.1
-MAX_RETRIES = 3
+# Performance configurations - Optimized for speed
+MAX_CONCURRENT_REQUESTS = 15  # Increased concurrency
+BATCH_SIZE = 8               # Balanced batch size for speed vs feedback
+RATE_LIMIT_DELAY = 0.05      # Reduced delay for faster processing
+MAX_RETRIES = 2              # Fewer retries for faster failure recovery
 CACHE_SIZE = 1000
 
 class ProcessRequest(BaseModel):
@@ -350,7 +350,7 @@ async def exa_search(query: str, row_index: Optional[int] = None) -> Dict[str, A
 # ===============================
 # Optimized OpenAI Call
 # ===============================
-async def call_openai(messages: list, max_tokens: int = 1200, retry_count: int = 0) -> str:
+async def call_openai(messages: list, max_tokens: int = 600, retry_count: int = 0) -> str:
     """Optimized OpenAI API call with retry logic"""
     try:
         response = await client.chat.completions.create(
@@ -857,10 +857,10 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
                     print(f"🏢 Oracle Sources: {oracle_sources}")
                     print(f"🌐 Community Sources: {community_sources}")
                     print(f"📚 Source Categories: {len(set(source_types))}")
-                    print(f"🤖 Model: {MODEL_NAME} | Max Tokens: 1200")
+                    print(f"🤖 Model: {MODEL_NAME} | Max Tokens: 600 (Speed Optimized)")
                     print(f"{'='*100}")
 
-                    ai_response = await call_openai(messages, max_tokens=1200)
+                    ai_response = await call_openai(messages, max_tokens=600)  # Reduced tokens for faster response
 
                     print(f"\n🎉 AI RESPONSE RECEIVED:")
                     print(f"{'='*80}")
