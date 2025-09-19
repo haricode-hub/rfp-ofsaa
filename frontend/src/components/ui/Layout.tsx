@@ -179,7 +179,7 @@ const Footer: React.FC = () => {
                   href="/chat-with-doc"
                   className="nav-link"
                 >
-                  Chat Agent
+                  Knowledge Agent
                 </Link>
               </li>
               <li>
