@@ -18,7 +18,6 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 
 function FSDGeneratorContent() {
   const { isDarkMode } = useTheme();
-  const [requirements, setRequirements] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<{
     filename: string;
@@ -28,7 +27,6 @@ function FSDGeneratorContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -74,68 +72,39 @@ function FSDGeneratorContent() {
   };
 
   const handleGenerate = async () => {
-    if (!requirements.trim() && !uploadedFile) return;
+    if (!uploadedFile) return;
 
     setIsGenerating(true);
     try {
-      let response;
+      // Generate FSD directly from uploaded file using new endpoint
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
 
-      if (uploadedFile) {
-        // Generate FSD directly from uploaded file using new endpoint
-        const formData = new FormData();
-        formData.append('file', uploadedFile);
-
-        // Add additional context if provided
-        if (requirements.trim()) {
-          formData.append('additional_context', requirements.trim());
-        }
-
-        response = await fetch('http://localhost:8000/fsd/generate-from-document', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // Generate from text only
-        response = await fetch('http://localhost:8000/fsd/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            question: requirements
-          })
-        });
-      }
+      const response = await fetch('http://localhost:8000/fsd/generate-from-document', {
+        method: 'POST',
+        body: formData
+      });
 
       if (!response.ok) {
         throw new Error('Failed to generate FSD');
       }
 
-      if (uploadedFile) {
-        // Handle document upload response - get JSON with document_id
-        const result = await response.json();
-        if (result.success && result.document_id) {
-          // Download the actual document using the document_id
-          const downloadResponse = await fetch(`http://localhost:8000/fsd/download/${result.document_id}`);
-          if (!downloadResponse.ok) {
-            throw new Error('Failed to download generated document');
-          }
-
-          const blob = await downloadResponse.blob();
-          setGeneratedDoc({
-            filename: 'fsd_document.docx',
-            blob: blob
-          });
-        } else {
-          throw new Error(result.message || 'Failed to generate FSD');
+      // Handle document upload response - get JSON with document_id
+      const result = await response.json();
+      if (result.success && result.document_id) {
+        // Download the actual document using the document_id
+        const downloadResponse = await fetch(`http://localhost:8000/fsd/download/${result.document_id}`);
+        if (!downloadResponse.ok) {
+          throw new Error('Failed to download generated document');
         }
-      } else {
-        // Handle text-only response - get blob directly
-        const blob = await response.blob();
+
+        const blob = await downloadResponse.blob();
         setGeneratedDoc({
           filename: 'fsd_document.docx',
           blob: blob
         });
+      } else {
+        throw new Error(result.message || 'Failed to generate FSD');
       }
     } catch (error) {
       console.error('Generation error:', error);
@@ -159,7 +128,6 @@ function FSDGeneratorContent() {
   };
 
   const resetForm = () => {
-    setRequirements('');
     setGeneratedDoc(null);
     setUploadedFile(null);
     if (fileInputRef.current) {
@@ -203,7 +171,7 @@ function FSDGeneratorContent() {
                      style={{
                        color: 'var(--text-secondary)'
                      }}>
-                    Describe your requirements or upload a document and we'll generate a professional FSD
+                    Upload a document and we'll generate a professional FSD from your content
                   </p>
                 </div>
 
@@ -289,32 +257,14 @@ function FSDGeneratorContent() {
                     </div>
                   )}
 
-                  {/* Text Input Area */}
-                  <div className="relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={requirements}
-                      onChange={(e) => setRequirements(e.target.value)}
-                      placeholder={uploadedFile ?
-                        "Add additional requirements or context (optional)..." :
-                        "Describe your project requirements in detail. For example:\n\n- Project objectives and scope\n- Functional requirements\n- Technical specifications\n- Business rules and constraints\n- User roles and permissions\n- Integration requirements\n\nThe more detailed your requirements, the better the generated FSD will be."}
-                      className="w-full h-32 px-4 py-3 pr-12 border rounded-lg resize-none transition-all duration-200 focus:outline-none focus:ring-2"
-                      style={{
-                        backgroundColor: 'var(--bg-primary)',
-                        borderColor: 'var(--border-color)',
-                        color: 'var(--text-primary)',
-                        '--tw-ring-color': 'var(--blue-primary)40'
-                      } as React.CSSProperties}
-                    />
-                  </div>
 
                   {/* Generate Button */}
                   <div className="flex justify-center pt-4">
                     <button
                       onClick={handleGenerate}
-                      disabled={!requirements.trim() && !uploadedFile}
+                      disabled={!uploadedFile}
                       className={`btn btn-primary btn-lg flex items-center space-x-2 ${
-                        (!requirements.trim() && !uploadedFile) ? 'opacity-50 cursor-not-allowed' : ''
+                        !uploadedFile ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     >
                       <ArrowRightCircleIcon className="h-5 w-5" />

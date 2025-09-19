@@ -8,7 +8,7 @@ import os
 import io
 import logging
 from services.ai_service import ai_service
-from services.fsd import fsd_service, FSDRequest
+from services.fsd import fsd_service
 from services.presales import presales_service, ProcessRequest
 
 # Configure logging
@@ -106,25 +106,6 @@ async def health_check():
 # FSD Agent Endpoints
 # ===============================
 
-@app.post("/fsd/generate")
-async def generate_fsd_document(request: FSDRequest):
-    """Generate Functional Specification Document"""
-    try:
-        result = await fsd_service.generate_fsd_document(request)
-
-        if not result.success:
-            raise HTTPException(status_code=500, detail=result.message)
-
-        return {
-            "success": result.success,
-            "message": result.message,
-            "token_usage": result.token_usage,
-            "document_id": result.document_id
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"FSD generation error: {str(e)}")
 
 @app.get("/fsd/download/{document_id}")
 async def download_fsd_document(document_id: str):

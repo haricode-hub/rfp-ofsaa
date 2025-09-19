@@ -260,9 +260,6 @@ class DocumentAnalyzer:
             }
         }
 
-class FSDRequest(BaseModel):
-    question: str
-
 class FSDResponse(BaseModel):
     success: bool
     message: str
@@ -515,68 +512,6 @@ class FSDAgentService:
 
         return response.choices[0].message.content
 
-    async def generate_function_document_async(self, function_requirement):
-        """Main method to generate function-specific document using both Qdrant and MCP Context7"""
-        # Create tasks for parallel execution
-        tasks = []
-
-        # Task 1: Search vector database (if available)
-        async def get_qdrant_context():
-            if self.qdrant_client:
-                try:
-                    # Run vector search in thread pool since it's synchronous
-                    loop = asyncio.get_event_loop()
-                    with ThreadPoolExecutor() as executor:
-                        vector_search_results = await loop.run_in_executor(
-                            executor, self.search_vector_db, function_requirement
-                        )
-                    return "\n".join([
-                        result.payload.get('text', '')
-                        for result in vector_search_results
-                        if result.payload and 'text' in result.payload
-                    ])
-                except Exception as e:
-                    logger.warning(f"Could not search vector database: {e}")
-            return ""
-
-        # Task 2: Get MCP context
-        async def get_mcp_context_async():
-            loop = asyncio.get_event_loop()
-            with ThreadPoolExecutor() as executor:
-                return await loop.run_in_executor(
-                    executor, self.get_mcp_context, function_requirement
-                )
-
-        # Execute both context retrieval tasks concurrently
-        qdrant_context, mcp_context = await asyncio.gather(
-            get_qdrant_context(),
-            get_mcp_context_async(),
-            return_exceptions=True
-        )
-
-        # Handle exceptions from gather
-        if isinstance(qdrant_context, Exception):
-            logger.warning(f"Qdrant context failed: {qdrant_context}")
-            qdrant_context = ""
-        if isinstance(mcp_context, Exception):
-            logger.warning(f"MCP context failed: {mcp_context}")
-            mcp_context = ""
-
-        # Generate document using async OpenAI with both contexts
-        generated_document = await self.generate_document_with_llama_async(
-            function_requirement,
-            qdrant_context,
-            mcp_context
-        )
-
-        # Log session summary
-        summary = self.token_tracker.get_session_summary()
-        logger.info(f"📊 SESSION SUMMARY - Generated {summary['documents_generated']} documents")
-        logger.info(f"   Total Tokens: {summary['total_tokens']:,} (Input: {summary['total_input_tokens']:,}, Output: {summary['total_output_tokens']:,})")
-        logger.info(f"   Total Cost: ${summary['total_cost']:.6f}")
-        logger.info(f"   Average per Document: ${summary['average_cost_per_document']:.6f}")
-
-        return generated_document
 
     def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a clean Word document with proper XML structure"""
@@ -1076,49 +1011,6 @@ class FSDAgentService:
 
         return response.choices[0].message.content
 
-    async def generate_fsd_document(self, request: FSDRequest) -> FSDResponse:
-        """Generate FSD document from request"""
-        try:
-            if not request.question.strip():
-                raise ValueError("Question cannot be empty")
-
-            # Generate document content using async advanced logic
-            generated_content = await self.generate_function_document_async(request.question)
-
-            # Create Word document with logo
-            logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
-            if not os.path.exists(logo_path):
-                logo_path = None  # Will work without logo
-
-            word_doc_bytes = self.save_as_word_simple(
-                generated_content,
-                request.question,
-                logo_path=logo_path
-            )
-
-            # Generate unique document ID
-            import uuid
-            doc_id = str(uuid.uuid4())
-
-            # Store document
-            self.generated_documents[doc_id] = word_doc_bytes
-
-            # Get token usage summary
-            token_summary = self.token_tracker.get_session_summary()
-
-            return FSDResponse(
-                success=True,
-                message=f"FSD document generated successfully",
-                token_usage=token_summary,
-                document_id=doc_id
-            )
-
-        except Exception as e:
-            logger.error(f"Error generating FSD document: {str(e)}")
-            return FSDResponse(
-                success=False,
-                message=f"Error generating FSD document: {str(e)}"
-            )
 
     async def generate_fsd_from_document_upload(self, file_bytes: bytes, filename: str, additional_context: str = "") -> FSDResponse:
         """Generate FSD document from uploaded file with enhanced context integration"""
