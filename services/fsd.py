@@ -578,12 +578,6 @@ class FSDAgentService:
 
         return generated_document
 
-    def _add_simple_bookmark(self, paragraph, bookmark_name):
-        """Add a simple bookmark placeholder (no XML manipulation)"""
-        # Simply add an invisible run for reference - no complex XML
-        run = paragraph.add_run()
-        run.text = ""  # Empty text, just for reference
-
     def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a Word document from the generated text and return it as bytes"""
         try:
@@ -630,28 +624,25 @@ class FSDAgentService:
             toc_heading = doc.add_heading('Table of Contents', level=1)
             toc_heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Define TOC items with bookmarks (no duplicate numbering)
+            # Define TOC items (no bookmarks to avoid XML corruption)
             toc_items = [
-                ("Introduction", "intro_bookmark"),
-                ("Requirement Overview", "req_overview_bookmark"),
-                ("Current Functionality", "current_func_bookmark"),
-                ("Proposed Functionality", "proposed_func_bookmark"),
-                ("Validations and Error Messages", "validations_bookmark"),
-                ("Interface Impact", "interface_bookmark"),
-                ("Migration Impact", "migration_bookmark"),
-                ("Assumptions", "assumptions_bookmark"),
-                ("RS-FS Traceability", "traceability_bookmark"),
-                ("Open and Closed Queries", "queries_bookmark"),
-                ("Annexure", "annexure_bookmark")
+                "Introduction",
+                "Requirement Overview",
+                "Current Functionality",
+                "Proposed Functionality",
+                "Validations and Error Messages",
+                "Interface Impact",
+                "Migration Impact",
+                "Assumptions",
+                "RS-FS Traceability",
+                "Open and Closed Queries",
+                "Annexure"
             ]
 
-            # Add simple TOC entries without complex XML manipulation
-            for i, (item_name, bookmark_name) in enumerate(toc_items, 1):
+            # Add simple TOC entries without complex formatting
+            for i, item_name in enumerate(toc_items, 1):
                 toc_paragraph = doc.add_paragraph()
                 toc_run = toc_paragraph.add_run(f"{i}. {item_name}")
-                # Simple blue formatting without XML
-                toc_run.font.color.rgb = None  # Use default color
-                toc_run.underline = False  # Remove underline to avoid XML issues
 
             # Insert a page break after the Table of Contents
             doc.add_page_break()
@@ -695,22 +686,10 @@ This document addresses the following requirement: {function_requirement[:200]}.
             if not sections["2. REQUIREMENT OVERVIEW"].strip():
                 sections["2. REQUIREMENT OVERVIEW"] = f"The business requirement centers around: {function_requirement}"
 
-            # Map section titles to bookmark names
-            section_bookmarks = {
-                "1. INTRODUCTION": "intro_bookmark",
-                "2. REQUIREMENT OVERVIEW": "req_overview_bookmark",
-                "3. CURRENT FUNCTIONALITY": "current_func_bookmark",
-                "4. PROPOSED FUNCTIONAL APPROACH": "proposed_func_bookmark"
-            }
-
-            # Add each section to the document with bookmarks
+            # Add each section to the document (no bookmarks)
             for i, (section_title, content) in enumerate(sections.items(), 1):
                 # Create a heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
-
-                # Add simple bookmark reference
-                bookmark_name = section_bookmarks.get(section_title, f"section_{i}_bookmark")
-                self._add_simple_bookmark(heading, bookmark_name)
 
                 # Add content with improved formatting
                 if content.strip():
@@ -724,24 +703,22 @@ This document addresses the following requirement: {function_requirement[:200]}.
                     paragraph = doc.add_paragraph("Content to be added.")
                     paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Add additional sections with bookmarks
+            # Add additional sections (no bookmarks)
             additional_sections = [
-                ("5. Validations and Error Messages", "NA.", "validations_bookmark"),
-                ("6. Interface Impact", "NA.", "interface_bookmark"),
-                ("7. Migration Impact", "NA", "migration_bookmark"),
-                ("8. Assumptions", "To be determined.", "assumptions_bookmark"),
-                ("11. Annexure", "To be added as required.", "annexure_bookmark")
+                ("5. Validations and Error Messages", "NA."),
+                ("6. Interface Impact", "NA."),
+                ("7. Migration Impact", "NA"),
+                ("8. Assumptions", "To be determined."),
+                ("11. Annexure", "To be added as required.")
             ]
 
-            for title, content, bookmark in additional_sections:
+            for title, content in additional_sections:
                 heading = doc.add_heading(title, level=1)
-                self._add_simple_bookmark(heading, bookmark)
                 paragraph = doc.add_paragraph(content)
                 paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
 
-            # Add RS-FS Traceability section with table and simple bookmark
+            # Add RS-FS Traceability section with table (no bookmarks)
             heading = doc.add_heading("9. RS-FS Traceability", level=1)
-            self._add_simple_bookmark(heading, "traceability_bookmark")
 
             # Create table for RS-FS Traceability
             table = doc.add_table(rows=2, cols=4)
@@ -753,16 +730,15 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 for i, header in enumerate(headers):
                     if i < len(table.rows[0].cells):
                         table.rows[0].cells[i].text = header
-                        # Make header bold
+                        # Make header bold without complex formatting
                         for paragraph in table.rows[0].cells[i].paragraphs:
                             for run in paragraph.runs:
                                 run.bold = True
             except Exception as e:
                 logger.warning(f"Issue with traceability table: {e}")
 
-            # Add Open and Closed Queries section with table and simple bookmark
+            # Add Open and Closed Queries section with table (no bookmarks)
             heading = doc.add_heading("10. Open and Closed Queries", level=1)
-            self._add_simple_bookmark(heading, "queries_bookmark")
 
             # Create queries table
             query_table = doc.add_table(rows=2, cols=6)
@@ -774,7 +750,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
                 for i, header in enumerate(query_headers):
                     if i < len(query_table.rows[0].cells):
                         query_table.rows[0].cells[i].text = header
-                        # Make header bold
+                        # Make header bold without complex formatting
                         for paragraph in query_table.rows[0].cells[i].paragraphs:
                             for run in paragraph.runs:
                                 run.bold = True
@@ -797,7 +773,7 @@ This document addresses the following requirement: {function_requirement[:200]}.
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise ValueError(f"Error generating Word document: {e}")
 
-    def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
+    def save_as_word_clean(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
         """Create a clean Word document without complex formatting that could cause corruption"""
         try:
             # Create a new Document
