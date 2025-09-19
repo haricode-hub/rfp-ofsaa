@@ -579,75 +579,88 @@ class FSDAgentService:
         return generated_document
 
     def save_as_word_simple(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
-        """Create a Word document from the generated text and return it as bytes"""
+        """Create a clean Word document with proper XML structure"""
         try:
-            # Create a new Document
+            # Create a new Document with minimal initial setup
             doc = Document()
 
-            # Create header with logo and bank name in top-right
-            header_paragraph = doc.add_paragraph()
-            header_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+            # Clear any default content that might cause issues
+            if doc.paragraphs:
+                for p in doc.paragraphs:
+                    if not p.text.strip():
+                        parent = p._element.getparent()
+                        if parent is not None:
+                            parent.remove(p._element)
 
-            # Use the JMR logo from src/public directory, fallback to provided logo_path
-            jmr_logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
-            if os.path.exists(jmr_logo_path):
-                header_run = header_paragraph.add_run()
-                header_run.add_picture(jmr_logo_path, width=Inches(1.5), height=Inches(0.9))
-                # Add bank name below logo
-                bank_name_para = doc.add_paragraph("JMR INFOTECH")
-                bank_name_para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                bank_name_run = bank_name_para.runs[0]
-                bank_name_run.bold = True
-                bank_name_run.font.size = Pt(10)
+            # Add header section with safe formatting
+            try:
+                # Use the JMR logo from src/public directory
+                jmr_logo_path = os.path.join(os.path.dirname(__file__), "..", "src", "public", "logo.png")
+                if os.path.exists(jmr_logo_path):
+                    # Add logo paragraph with proper structure
+                    logo_para = doc.add_paragraph()
+                    logo_para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    logo_run = logo_para.add_run()
+                    logo_run.add_picture(jmr_logo_path, width=Inches(1.5), height=Inches(0.9))
 
-                bank_name_para2 = doc.add_paragraph("BANK A-LONG")
-                bank_name_para2.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-                bank_name_run2 = bank_name_para2.runs[0]
-                bank_name_run2.bold = True
-                bank_name_run2.font.size = Pt(10)
-            elif logo_path and os.path.exists(logo_path):
-                # Fallback to provided logo
-                header_run = header_paragraph.add_run()
-                header_run.add_picture(logo_path, width=Inches(1.5), height=Inches(0.9))
+                    # Add bank name with simple formatting
+                    bank_para1 = doc.add_paragraph("JMR INFOTECH")
+                    bank_para1.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    if bank_para1.runs:
+                        bank_para1.runs[0].bold = True
+                        bank_para1.runs[0].font.size = Pt(10)
 
-            # Add some spacing
-            doc.add_paragraph()
+                    bank_para2 = doc.add_paragraph("BANK A-LONG")
+                    bank_para2.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    if bank_para2.runs:
+                        bank_para2.runs[0].bold = True
+                        bank_para2.runs[0].font.size = Pt(10)
 
-            # Add document title (center-aligned)
-            title_paragraph = doc.add_heading('Functional Specification Document', level=1)
-            title_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                elif logo_path and os.path.exists(logo_path):
+                    # Fallback logo
+                    logo_para = doc.add_paragraph()
+                    logo_para.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    logo_run = logo_para.add_run()
+                    logo_run.add_picture(logo_path, width=Inches(1.5), height=Inches(0.9))
+
+            except Exception as e:
+                logger.warning(f"Logo insertion failed: {e}, continuing without logo")
 
             # Add spacing
-            doc.add_paragraph()
+            doc.add_paragraph("")
 
-            # Add Table of Contents heading
-            toc_heading = doc.add_heading('Table of Contents', level=1)
-            toc_heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+            # Add document title with safe formatting
+            title_para = doc.add_heading("Functional Specification Document", level=1)
+            title_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            # Define TOC items (no bookmarks to avoid XML corruption)
+            # Add spacing
+            doc.add_paragraph("")
+
+            # Add Table of Contents
+            toc_heading = doc.add_heading("Table of Contents", level=1)
+
+            # Simple TOC without any complex formatting
             toc_items = [
-                "Introduction",
-                "Requirement Overview",
-                "Current Functionality",
-                "Proposed Functionality",
-                "Validations and Error Messages",
-                "Interface Impact",
-                "Migration Impact",
-                "Assumptions",
-                "RS-FS Traceability",
-                "Open and Closed Queries",
-                "Annexure"
+                "1. Introduction",
+                "2. Requirement Overview",
+                "3. Current Functionality",
+                "4. Proposed Functionality",
+                "5. Validations and Error Messages",
+                "6. Interface Impact",
+                "7. Migration Impact",
+                "8. Assumptions",
+                "9. RS-FS Traceability",
+                "10. Open and Closed Queries",
+                "11. Annexure"
             ]
 
-            # Add simple TOC entries without complex formatting
-            for i, item_name in enumerate(toc_items, 1):
-                toc_paragraph = doc.add_paragraph()
-                toc_run = toc_paragraph.add_run(f"{i}. {item_name}")
+            for item in toc_items:
+                doc.add_paragraph(item)
 
-            # Insert a page break after the Table of Contents
+            # Page break
             doc.add_page_break()
 
-            # Parse the generated text and add core sections
+            # Parse generated text into sections
             sections = {
                 "1. INTRODUCTION": "",
                 "2. REQUIREMENT OVERVIEW": "",
@@ -655,55 +668,45 @@ class FSDAgentService:
                 "4. PROPOSED FUNCTIONAL APPROACH": ""
             }
 
-            # Process the generated text to extract sections
+            # Simple text parsing
             current_section = None
             for line in text.split('\n'):
                 line = line.strip()
                 if not line:
                     continue
 
-                # Check if line is a section header - improved matching
+                # Check for section headers
                 for section_title in sections.keys():
-                    section_name = section_title.split(". ")[1]  # e.g., "INTRODUCTION"
-                    section_number = section_title.split(". ")[0]  # e.g., "1"
-
-                    # Match various formats: "1. INTRODUCTION", "INTRODUCTION", "1.INTRODUCTION", etc.
-                    if (section_name.lower() in line.lower() and
-                        (section_number in line or line.strip().upper().startswith(section_name.upper()))):
+                    section_name = section_title.split(". ")[1]
+                    if section_name.lower() in line.lower():
                         current_section = section_title
                         break
 
                 if current_section and line.lower() not in [s.lower() for s in sections.keys()]:
-                    if not any(title.lower() in line.lower() for title in [t.split(". ")[1].lower() for t in sections.keys()]):
-                        sections[current_section] += line + "\n"
+                    sections[current_section] += line + "\n"
 
-            # Ensure all sections have some content - add fallback content if empty
+            # Add fallback content if empty
             if not sections["1. INTRODUCTION"].strip():
-                sections["1. INTRODUCTION"] = f"""This Functional Specification Document (FSD) outlines the requirements and proposed implementation approach for the requested functionality. The document serves as a comprehensive guide for development teams to understand the scope, current state, and proposed changes to the system.
-
-This document addresses the following requirement: {function_requirement[:200]}..."""
+                sections["1. INTRODUCTION"] = f"This FSD outlines requirements for: {function_requirement[:200]}..."
 
             if not sections["2. REQUIREMENT OVERVIEW"].strip():
-                sections["2. REQUIREMENT OVERVIEW"] = f"The business requirement centers around: {function_requirement}"
+                sections["2. REQUIREMENT OVERVIEW"] = f"Business requirement: {function_requirement}"
 
-            # Add each section to the document (no bookmarks)
+            # Add main sections with minimal formatting
             for i, (section_title, content) in enumerate(sections.items(), 1):
-                # Create a heading
                 heading = doc.add_heading(f"{i}. {section_title.split('. ')[1].title()}", level=1)
 
-                # Add content with improved formatting
                 if content.strip():
-                    paragraph = doc.add_paragraph(content)
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-                    paragraph_format = paragraph.paragraph_format
-                    paragraph_format.space_before = Pt(6)
-                    paragraph_format.space_after = Pt(6)
-                    paragraph_format.line_spacing = 1.15
+                    content_para = doc.add_paragraph(content.strip())
+                    # Safe formatting
+                    try:
+                        content_para.paragraph_format.space_after = Pt(6)
+                    except:
+                        pass
                 else:
-                    paragraph = doc.add_paragraph("Content to be added.")
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                    doc.add_paragraph("Content to be added.")
 
-            # Add additional sections (no bookmarks)
+            # Add additional sections
             additional_sections = [
                 ("5. Validations and Error Messages", "NA."),
                 ("6. Interface Impact", "NA."),
@@ -713,58 +716,54 @@ This document addresses the following requirement: {function_requirement[:200]}.
             ]
 
             for title, content in additional_sections:
-                heading = doc.add_heading(title, level=1)
-                paragraph = doc.add_paragraph(content)
-                paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                doc.add_heading(title, level=1)
+                doc.add_paragraph(content)
 
-            # Add RS-FS Traceability section with table (no bookmarks)
-            heading = doc.add_heading("9. RS-FS Traceability", level=1)
+            # Add traceability table with minimal complexity
+            doc.add_heading("9. RS-FS Traceability", level=1)
 
-            # Create table for RS-FS Traceability
-            table = doc.add_table(rows=2, cols=4)
-            table.style = 'Table Grid'
-
-            # Add headers safely
             try:
+                table = doc.add_table(rows=2, cols=4)
+                table.style = 'Table Grid'
+
                 headers = ["S. No.", "RS Section", "RS Section Description", "FS Section / Description"]
                 for i, header in enumerate(headers):
                     if i < len(table.rows[0].cells):
                         table.rows[0].cells[i].text = header
-                        # Make header bold without complex formatting
-                        for paragraph in table.rows[0].cells[i].paragraphs:
-                            for run in paragraph.runs:
-                                run.bold = True
+
             except Exception as e:
-                logger.warning(f"Issue with traceability table: {e}")
+                logger.warning(f"Table creation failed: {e}")
+                doc.add_paragraph("Table will be added manually.")
 
-            # Add Open and Closed Queries section with table (no bookmarks)
-            heading = doc.add_heading("10. Open and Closed Queries", level=1)
+            # Add queries table
+            doc.add_heading("10. Open and Closed Queries", level=1)
 
-            # Create queries table
-            query_table = doc.add_table(rows=2, cols=6)
-            query_table.style = 'Table Grid'
-
-            # Add headers safely
             try:
+                query_table = doc.add_table(rows=2, cols=6)
+                query_table.style = 'Table Grid'
+
                 query_headers = ["Sr. No", "Issue Details", "Date Raised", "Clarification", "Raised By", "Current Status"]
                 for i, header in enumerate(query_headers):
                     if i < len(query_table.rows[0].cells):
                         query_table.rows[0].cells[i].text = header
-                        # Make header bold without complex formatting
-                        for paragraph in query_table.rows[0].cells[i].paragraphs:
-                            for run in paragraph.runs:
-                                run.bold = True
-            except Exception as e:
-                logger.warning(f"Issue with queries table: {e}")
 
-            # Save document to BytesIO and return bytes
+            except Exception as e:
+                logger.warning(f"Query table creation failed: {e}")
+                doc.add_paragraph("Query table will be added manually.")
+
+            # Save with proper error handling and validation
             doc_buffer = io.BytesIO()
             doc.save(doc_buffer)
             doc_buffer.seek(0)
             document_bytes = doc_buffer.getvalue()
+
+            # Validate the document size
+            if len(document_bytes) < 1000:
+                raise ValueError("Generated document is too small, likely corrupted")
+
             doc_buffer.close()
 
-            logger.info(f"Word document created successfully, size: {len(document_bytes)} bytes")
+            logger.info(f"Clean Word document created successfully, size: {len(document_bytes)} bytes")
             return document_bytes
 
         except Exception as e:
