@@ -46,35 +46,35 @@ async def upload_document(file: UploadFile = File(...)):
             'application/vnd.ms-powerpoint': '.ppt',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx'
         }
-
+        
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
-
+        
         # Create temporary file
         suffix = allowed_types.get(file.content_type, '')
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
             content = await file.read()
             temp_file.write(content)
             temp_file.flush()
-
+            
             try:
                 # Convert document using docling
                 result = converter.convert(temp_file.name)
                 markdown_content = result.document.export_to_markdown()
-
+                
                 return {
                     "filename": file.filename,
                     "content": markdown_content,
                     "status": "success"
                 }
-
+                
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
-
+            
             finally:
                 # Clean up temporary file
                 os.unlink(temp_file.name)
-
+                
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
