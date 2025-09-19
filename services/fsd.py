@@ -260,81 +260,6 @@ class DocumentAnalyzer:
             }
         }
 
-    async def analyze_document_fast(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
-        """Fast document analysis with minimal AI processing for speed optimization"""
-
-        # Determine file type and parse accordingly
-        file_extension = filename.lower().split('.')[-1]
-
-        if file_extension == 'pdf':
-            content = self.parse_pdf(file_bytes)
-        elif file_extension in ['docx', 'doc']:
-            content = self.parse_docx(file_bytes)
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-
-        if not content.strip():
-            raise ValueError("No text content could be extracted from the document")
-
-        # Fast section extraction using simple text processing instead of heavy AI
-        sections = self._extract_sections_fast(content)
-
-        return {
-            "raw_content": content,
-            "extracted_sections": sections,
-            "file_info": {
-                "filename": filename,
-                "file_type": file_extension,
-                "content_length": len(content),
-                "word_count": len(content.split())
-            }
-        }
-
-    def _extract_sections_fast(self, content: str) -> Dict[str, str]:
-        """Fast section extraction using keywords and patterns"""
-        sections = {}
-        content_lower = content.lower()
-
-        # Use keyword matching instead of AI for speed
-        if any(keyword in content_lower for keyword in ['executive', 'summary', 'overview']):
-            sections['executive_summary'] = self._extract_by_keywords(content, ['executive', 'summary', 'overview'])
-        else:
-            sections['executive_summary'] = "Not specified in document"
-
-        if any(keyword in content_lower for keyword in ['business', 'requirements', 'scope']):
-            sections['business_requirements'] = self._extract_by_keywords(content, ['business', 'requirements', 'scope'])
-        else:
-            sections['business_requirements'] = "Not specified in document"
-
-        if any(keyword in content_lower for keyword in ['functional', 'features', 'specifications']):
-            sections['functional_requirements'] = self._extract_by_keywords(content, ['functional', 'features', 'specifications'])
-        else:
-            sections['functional_requirements'] = "Not specified in document"
-
-        if any(keyword in content_lower for keyword in ['technical', 'architecture', 'technology']):
-            sections['technical_requirements'] = self._extract_by_keywords(content, ['technical', 'architecture', 'technology'])
-        else:
-            sections['technical_requirements'] = "Not specified in document"
-
-        # Always include full content as fallback
-        sections['document_content'] = content[:2000]  # Limit to first 2000 chars for speed
-
-        return sections
-
-    def _extract_by_keywords(self, content: str, keywords: List[str]) -> str:
-        """Extract content around keywords for fast processing"""
-        lines = content.split('\n')
-        relevant_lines = []
-
-        for line in lines:
-            if any(keyword.lower() in line.lower() for keyword in keywords):
-                relevant_lines.append(line.strip())
-
-        if relevant_lines:
-            return ' '.join(relevant_lines[:5])  # Take first 5 relevant lines
-        else:
-            return content[:500]  # Fallback to first 500 chars
-
 class FSDResponse(BaseModel):
     success: bool
     message: str
@@ -923,110 +848,39 @@ class FSDAgentService:
             logger.error(f"Error generating clean Word document: {e}")
             raise ValueError(f"Error generating Word document: {e}")
 
-    def save_as_word_fast(self, text, function_requirement, logo_path=None, filename="fsd_document.docx"):
-        """Fast Word document creation with minimal formatting for speed"""
-        try:
-            doc = Document()
-
-            # Add title
-            title = doc.add_heading('Functional Specification Document', 0)
-            title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-
-            # Add generated timestamp
-            doc.add_paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            doc.add_paragraph()
-
-            # Split text into paragraphs and add with minimal formatting
-            paragraphs = text.split('\n\n')
-
-            for para_text in paragraphs:
-                if para_text.strip():
-                    # Check if it's a heading (starts with #)
-                    if para_text.strip().startswith('#'):
-                        # Remove # symbols and make it a heading
-                        heading_text = para_text.strip().lstrip('#').strip()
-                        if heading_text:
-                            doc.add_heading(heading_text, level=1)
-                    else:
-                        # Regular paragraph
-                        para = doc.add_paragraph(para_text.strip())
-
-            # Save to bytes (faster than file operations)
-            doc_io = io.BytesIO()
-            doc.save(doc_io)
-            doc_io.seek(0)
-
-            return doc_io.read()
-
-        except Exception as e:
-            logger.error(f"Error generating fast Word document: {e}")
-            raise ValueError(f"Error generating Word document: {e}")
-
     async def generate_fsd_from_document_async(self, file_bytes: bytes, filename: str, additional_context: str = "") -> str:
-        """Generate FSD document from uploaded document with enhanced context - OPTIMIZED"""
+        """Generate FSD document from uploaded document with enhanced context"""
 
-        # Step 1: Fast document analysis (simplified)
-        document_analysis = await self.document_analyzer.analyze_document_fast(file_bytes, filename)
+        # Step 1: Analyze the uploaded document asynchronously
+        document_analysis = await self.document_analyzer.analyze_document_async(file_bytes, filename)
         extracted_sections = document_analysis["extracted_sections"]
 
         # Step 2: Create a comprehensive requirement from extracted sections
         combined_requirement = self._combine_document_sections(extracted_sections, additional_context)
 
-        # Step 3 & 4: Run context retrieval in parallel (non-blocking)
-        async def get_contexts_parallel():
-            tasks = []
+        # Step 3: Get vector search context based on extracted requirements
+        qdrant_context = ""
+        if self.qdrant_client:
+            try:
+                # Search using business and functional requirements
+                search_query = f"{extracted_sections.get('business_requirements', '')} {extracted_sections.get('functional_requirements', '')}"
+                if search_query.strip() and search_query.strip() != "Not specified in document":
+                    vector_search_results = self.search_vector_db(search_query.strip())
+                    qdrant_context = "\n".join([
+                        result.payload.get('text', '')
+                        for result in vector_search_results
+                        if result.payload and 'text' in result.payload
+                    ])
+            except Exception as e:
+                logger.warning(f"Could not search vector database: {e}")
 
-            # Async vector search if available
-            if self.qdrant_client:
-                async def get_qdrant_context():
-                    try:
-                        search_query = f"{extracted_sections.get('business_requirements', '')} {extracted_sections.get('functional_requirements', '')}"
-                        if search_query.strip() and search_query.strip() != "Not specified in document":
-                            # Run in thread pool to avoid blocking
-                            loop = asyncio.get_event_loop()
-                            with ThreadPoolExecutor(max_workers=1) as executor:
-                                vector_results = await loop.run_in_executor(
-                                    executor, self.search_vector_db, search_query.strip()
-                                )
-                            return "\n".join([
-                                result.payload.get('text', '')
-                                for result in vector_results
-                                if result.payload and 'text' in result.payload
-                            ])
-                    except Exception as e:
-                        logger.warning(f"Vector search failed: {e}")
-                    return ""
-                tasks.append(get_qdrant_context())
-            else:
-                async def empty_task():
-                    return ""
-                tasks.append(empty_task())
+        # Step 4: Get MCP Context based on requirements
+        mcp_context = ""
+        if extracted_sections.get('functional_requirements') and extracted_sections['functional_requirements'] != "Not specified in document":
+            mcp_context = self.get_mcp_context(extracted_sections['functional_requirements'])
 
-            # Async MCP context if available
-            if extracted_sections.get('functional_requirements') and extracted_sections['functional_requirements'] != "Not specified in document":
-                async def get_mcp_context_async():
-                    try:
-                        loop = asyncio.get_event_loop()
-                        with ThreadPoolExecutor(max_workers=1) as executor:
-                            return await loop.run_in_executor(
-                                executor, self.get_mcp_context, extracted_sections['functional_requirements']
-                            )
-                    except Exception as e:
-                        logger.warning(f"MCP context failed: {e}")
-                        return ""
-                tasks.append(get_mcp_context_async())
-            else:
-                async def empty_task2():
-                    return ""
-                tasks.append(empty_task2())
-
-            return await asyncio.gather(*tasks)
-
-        # Run context retrieval in parallel
-        qdrant_context, mcp_context = await get_contexts_parallel()
-
-        # Step 5: Generate enhanced FSD using streamlined AI call
-        enhanced_content = await self._generate_document_fast_fsd_async(
+        # Step 5: Generate enhanced FSD using document context asynchronously
+        enhanced_content = await self._generate_document_enhanced_fsd_async(
             document_analysis,
             combined_requirement,
             qdrant_context,
@@ -1157,63 +1011,6 @@ class FSDAgentService:
 
         return response.choices[0].message.content
 
-    async def _generate_document_fast_fsd_async(self, document_analysis: Dict[str, Any], combined_requirement: str, qdrant_context: str, mcp_context: str) -> str:
-        """Fast FSD generation with streamlined prompt and single AI call"""
-
-        # Get essential info
-        file_info = document_analysis["file_info"]
-        extracted_sections = document_analysis["extracted_sections"]
-
-        # Build streamlined context (limit size for speed)
-        context_parts = []
-        if qdrant_context:
-            context_parts.append(f"Reference Context: {qdrant_context[:500]}")  # Limit context size
-        if mcp_context:
-            context_parts.append(f"Documentation: {mcp_context[:500]}")
-
-        context_text = "\n".join(context_parts) if context_parts else ""
-
-        # Streamlined prompt focused on speed
-        prompt = f"""Generate a Functional Specification Document from this content:
-
-DOCUMENT: {file_info['filename']}
-CONTENT: {extracted_sections.get('document_content', combined_requirement[:1000])}
-
-{context_text}
-
-Create a professional FSD with these sections:
-1. Executive Summary
-2. Business Requirements
-3. Functional Requirements
-4. Technical Specifications
-5. Implementation Plan
-
-Keep it comprehensive but concise. Focus on actionable specifications."""
-
-        try:
-            # Single streamlined AI call with faster model settings
-            response = await self.async_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=3000,  # Reduced for speed
-                temperature=0.3,  # Lower for consistency and speed
-            )
-
-            # Log usage
-            if hasattr(response, 'usage') and response.usage:
-                self.token_tracker.log_usage(
-                    "Fast_FSD_Generation",
-                    response.usage.prompt_tokens,
-                    response.usage.completion_tokens,
-                    f"File: {file_info['filename']}"
-                )
-
-            return response.choices[0].message.content
-
-        except Exception as e:
-            logger.error(f"Fast FSD generation failed: {e}")
-            raise ValueError(f"AI generation error: {e}")
-
 
     async def generate_fsd_from_document_upload(self, file_bytes: bytes, filename: str, additional_context: str = "") -> FSDResponse:
         """Generate FSD document from uploaded file with enhanced context integration"""
@@ -1231,7 +1028,7 @@ Keep it comprehensive but concise. Focus on actionable specifications."""
             if additional_context.strip():
                 base_requirement += f" with additional context: {additional_context[:100]}..."
 
-            word_doc_bytes = self.save_as_word_fast(
+            word_doc_bytes = self.save_as_word_simple(
                 generated_content,
                 base_requirement,
                 logo_path=logo_path
