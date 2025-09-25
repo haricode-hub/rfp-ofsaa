@@ -14,6 +14,7 @@ from services.presales import presales_service, ProcessRequest
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
 app.add_middleware(
@@ -50,43 +51,30 @@ async def upload_document(file: UploadFile = File(...)):
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
         
-        # Cross-platform temporary file handling
+        # Create temporary file
         suffix = allowed_types.get(file.content_type, '')
-        content = await file.read()
-
-        # Use mkstemp for universal cross-platform compatibility
-        temp_fd, temp_file_path = tempfile.mkstemp(suffix=suffix)
-
-        try:
-            # Write content and ensure file is properly closed across all platforms
-            with os.fdopen(temp_fd, 'wb') as temp_file:
-                temp_file.write(content)
-                temp_file.flush()
-                # Force write to disk on all platforms
-                if hasattr(os, 'fsync'):
-                    os.fsync(temp_file.fileno())
-
-            # Convert document using docling (file handle is now closed on all platforms)
-            result = converter.convert(temp_file_path)
-            markdown_content = result.document.export_to_markdown()
-
-            return {
-                "filename": file.filename,
-                "content": markdown_content,
-                "status": "success"
-            }
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
-
-        finally:
-            # Cross-platform cleanup with robust error handling
-            if temp_file_path and os.path.exists(temp_file_path):
-                try:
-                    os.unlink(temp_file_path)
-                except (OSError, PermissionError) as cleanup_error:
-                    # Log warning but don't fail the request (works on all platforms)
-                    logger.warning(f"Could not delete temporary file {temp_file_path}: {cleanup_error}")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file.flush()
+            
+            try:
+                # Convert document using docling
+                result = converter.convert(temp_file.name)
+                markdown_content = result.document.export_to_markdown()
+                
+                return {
+                    "filename": file.filename,
+                    "content": markdown_content,
+                    "status": "success"
+                }
+                
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
+            
+            finally:
+                # Clean up temporary file
+                os.unlink(temp_file.name)
                 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
