@@ -855,11 +855,12 @@ function ChatInterface() {
             <div className="fixed top-20 right-4 z-20">
               <button
                 onClick={restoreCanvas}
-                className="btn btn-primary flex items-center gap-2"
+                className="btn btn-primary flex items-center gap-1.5"
+                style={{ padding: '0.375rem 0.625rem' }}
                 aria-label="Restore canvas"
               >
-                <span className="text-sm font-medium">{canvasName}</span>
-                <ChevronDownIcon className="h-5 w-5" />
+                <span className="text-xs font-medium">{canvasName}</span>
+                <ChevronDownIcon className="h-4 w-4" />
               </button>
             </div>
           )}
