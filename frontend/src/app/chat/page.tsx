@@ -699,7 +699,7 @@ function ChatInterface() {
                           cursor: !documentContent.trim() ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        <PlusIcon className="h-5 w-5" />
+                        <PlusIcon className="h-4 w-4" />
                       </button>
                       <form onSubmit={handleChatSubmit} className="w-full">
                         <input
