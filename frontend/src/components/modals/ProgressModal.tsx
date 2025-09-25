@@ -27,13 +27,13 @@ export default function ProgressModal({
         className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
           isDarkMode 
             ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-            : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+            : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
         }`}
       >
         <div className={`flex-shrink-0 flex items-center justify-center p-6 border-b backdrop-blur-sm rounded-t-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <h2 className="text-xl font-medium" style={{ fontWeight: FONT_STYLES.fontWeight.medium }}>
             {title}

@@ -631,7 +631,7 @@ function ChatInterface() {
                     <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl border ${
                       isDarkMode 
                         ? 'border-white/10 bg-white/[0.03]' 
-                        : 'border-amber-200/50 bg-[#FFF8F0]'
+                        : 'border-blue-200/50 bg-blue-50/30'
                     }`}>
                       <div className={`mt-0.5 ${
                         isDarkMode ? 'text-zinc-400' : 'text-gray-600'
@@ -658,7 +658,7 @@ function ChatInterface() {
                         className={`transition-colors p-1 rounded ${
                           isDarkMode 
                             ? 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5' 
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-amber-100'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-blue-100'
                         }`}
                       >
                         <XMarkIcon className="h-4 w-4" />
@@ -672,11 +672,11 @@ function ChatInterface() {
                       !documentContent.trim() 
                         ? (isDarkMode 
                           ? 'border-white/30 bg-zinc-900/80 opacity-70' 
-                          : 'border-amber-300/60 bg-white/85 opacity-70'
+                          : 'border-blue-300/60 bg-white/85 opacity-70'
                         )
                         : (isDarkMode 
                           ? 'border-white/40 bg-zinc-900/90' 
-                          : 'border-amber-300/80 bg-white/95'
+                          : 'border-blue-300/80 bg-white/95'
                         )
                     } ${
                       isGenerating 
@@ -872,14 +872,14 @@ function ChatInterface() {
               className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
                   ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
               }`}
             >
               {/* Modal Header */}
               <div className={`flex-shrink-0 flex items-center justify-center p-6 border-b backdrop-blur-sm rounded-t-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <h2 className="text-xl font-medium" style={{ fontWeight: 500 }}>
                   Processing Document
@@ -936,7 +936,7 @@ function ChatInterface() {
               className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
                   ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -944,7 +944,7 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <h2 className="text-xl font-medium" style={{ fontWeight: 500 }}>
                   Clear Document
@@ -954,7 +954,7 @@ function ChatInterface() {
                   className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                      : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
                   }`}
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -972,7 +972,7 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex justify-end gap-3 p-6 border-t backdrop-blur-sm rounded-b-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <button
                   onClick={() => setShowClearConfirm(false)}
@@ -1012,7 +1012,7 @@ function ChatInterface() {
               className={`relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
                   ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1020,7 +1020,7 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <h2 className="text-2xl font-medium" style={{ fontWeight: 500 }}>
                   📝 Markdown Canvas Guide
@@ -1030,7 +1030,7 @@ function ChatInterface() {
                   className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                      : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
                   }`}
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -1078,13 +1078,13 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <div className="flex justify-between items-center mb-2">
                         <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                           isDarkMode 
                             ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
+                            : 'bg-blue-100 text-blue-900'
                         }`}>Escape</kbd>
                         <span className={`text-sm ${
                           isDarkMode ? 'text-zinc-200' : 'text-gray-900'
@@ -1097,14 +1097,14 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex gap-1 items-center">
                           <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                             isDarkMode 
                               ? 'bg-white/10 text-zinc-300' 
-                              : 'bg-amber-100 text-amber-900'
+                              : 'bg-blue-100 text-blue-900'
                           }`}>Ctrl</kbd>
                           <span className={`text-xs ${
                             isDarkMode ? 'text-zinc-400' : 'text-gray-500'
@@ -1112,7 +1112,7 @@ function ChatInterface() {
                           <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                             isDarkMode 
                               ? 'bg-white/10 text-zinc-300' 
-                              : 'bg-amber-100 text-amber-900'
+                              : 'bg-blue-100 text-blue-900'
                           }`}>Enter</kbd>
                         </div>
                         <span className={`text-sm ${
@@ -1126,13 +1126,13 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <div className="flex justify-between items-center mb-2">
                         <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                           isDarkMode 
                             ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
+                            : 'bg-blue-100 text-blue-900'
                         }`}>Enter</kbd>
                         <span className={`text-sm ${
                           isDarkMode ? 'text-zinc-200' : 'text-gray-900'
@@ -1145,13 +1145,13 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <div className="flex justify-between items-center mb-2">
                         <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                           isDarkMode 
                             ? 'bg-white/10 text-zinc-300' 
-                            : 'bg-amber-100 text-amber-900'
+                            : 'bg-blue-100 text-blue-900'
                         }`}>Click</kbd>
                         <span className={`text-sm ${
                           isDarkMode ? 'text-zinc-200' : 'text-gray-900'
@@ -1178,7 +1178,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div># Heading 1</div>
                         <div>## Heading 2</div>
@@ -1194,7 +1194,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div>**bold text**</div>
                         <div>*italic text*</div>
@@ -1211,7 +1211,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div>- Bullet point</div>
                         <div>- Another item</div>
@@ -1228,7 +1228,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div>[Link text](https://url.com)</div>
                         <div>![Image](image-url.jpg)</div>
@@ -1243,7 +1243,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div>```javascript</div>
                         <div>const code = &quot;here&quot;;</div>
@@ -1259,7 +1259,7 @@ function ChatInterface() {
                       <div className={`p-3 rounded-lg text-sm font-mono border ${
                         isDarkMode 
                           ? 'bg-white/[0.03] border-white/10' 
-                          : 'bg-[#FFF8F0] border-amber-200/50'
+                          : 'bg-blue-50/30 border-blue-200/50'
                       }`}>
                         <div>| Header | Header |</div>
                         <div>|--------|--------|</div>
@@ -1278,7 +1278,7 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <h4 className="mb-2" style={{ fontWeight: 500 }}>✨ Smart Paste</h4>
                       <p className={`text-sm ${
@@ -1288,7 +1288,7 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <h4 className="mb-2" style={{ fontWeight: 500 }}>🎯 Syntax Highlighting</h4>
                       <p className={`text-sm ${
@@ -1298,7 +1298,7 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <h4 className="mb-2" style={{ fontWeight: 500 }}>📱 Responsive Design</h4>
                       <p className={`text-sm ${
@@ -1308,7 +1308,7 @@ function ChatInterface() {
                     <div className={`p-4 rounded-lg border shadow-sm ${
                       isDarkMode 
                         ? 'bg-white/[0.03] border-white/10' 
-                        : 'bg-[#FFF8F0] border-amber-200/50'
+                        : 'bg-blue-50/30 border-blue-200/50'
                     }`}>
                       <h4 className="mb-2" style={{ fontWeight: 500 }}>🌙 Theme Support</h4>
                       <p className={`text-sm ${
@@ -1360,14 +1360,14 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <button
                   onClick={() => setShowHelp(false)}
                   className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+                      : 'bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/50 shadow-blue-200/30'
                   }`}
                   style={{ fontWeight: 500 }}
                 >
@@ -1389,7 +1389,7 @@ function ChatInterface() {
               className={`relative w-full max-w-3xl max-h-[80vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
                 isDarkMode 
                   ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-                  : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+                  : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1397,7 +1397,7 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <h2 className="text-xl font-medium" style={{ fontWeight: 500 }}>
                   Version History
@@ -1407,7 +1407,7 @@ function ChatInterface() {
                   className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                      : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                      : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
                   }`}
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -1435,7 +1435,7 @@ function ChatInterface() {
                           className={`p-4 rounded-lg border cursor-pointer transition-all ${
                             isDarkMode 
                               ? `${isCurrent ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.05]'}` 
-                              : `${isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-[#FFF8F0] border-amber-200/50 hover:bg-amber-50'}`
+                              : `${isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-blue-50/30 border-blue-200/50 hover:bg-blue-50'}`
                           }`}
                           onClick={() => {
                             canvasRef.current?.goToVersion(index);
@@ -1473,7 +1473,7 @@ function ChatInterface() {
                               className={`px-3 py-1 text-xs rounded-lg transition-colors ${
                                 isDarkMode 
                                   ? 'bg-white/10 hover:bg-white/20 text-zinc-200' 
-                                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
+                                  : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
                               }`}
                             >
                               Restore
@@ -1497,14 +1497,14 @@ function ChatInterface() {
               <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
                 isDarkMode 
                   ? 'border-white/20 bg-zinc-900/90' 
-                  : 'border-amber-200/50 bg-white/90'
+                  : 'border-blue-200/50 bg-white/90'
               }`}>
                 <button
                   onClick={() => setShowVersionHistory(false)}
                   className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
                     isDarkMode 
                       ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+                      : 'bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/50 shadow-blue-200/30'
                   }`}
                   style={{ fontWeight: 500 }}
                 >

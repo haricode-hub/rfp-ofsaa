@@ -37,14 +37,14 @@ export default function VersionHistoryModal({
         className={`relative w-full max-w-3xl max-h-[80vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
           isDarkMode 
             ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-            : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+            : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <h2 className="text-xl font-medium" style={{ fontWeight: FONT_STYLES.fontWeight.medium }}>
             Version History
@@ -54,7 +54,7 @@ export default function VersionHistoryModal({
             className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
               isDarkMode 
                 ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
             }`}
           >
             <XMarkIcon className="h-6 w-6" />
@@ -88,14 +88,14 @@ export default function VersionHistoryModal({
         <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <button
             onClick={onClose}
             className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
               isDarkMode 
                 ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+                : 'bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/50 shadow-blue-200/30'
             }`}
             style={{ fontWeight: FONT_STYLES.fontWeight.medium }}
           >
@@ -131,7 +131,7 @@ function VersionHistoryItem({
       className={`p-4 rounded-lg border cursor-pointer transition-all ${
         isDarkMode 
           ? `${isCurrent ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.05]'}` 
-          : `${isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-[#FFF8F0] border-amber-200/50 hover:bg-amber-50'}`
+          : `${isCurrent ? 'bg-blue-50 border-blue-300' : 'bg-blue-50/30 border-blue-200/50 hover:bg-blue-50'}`
       }`}
       onClick={onRestore}
     >
@@ -165,7 +165,7 @@ function VersionHistoryItem({
           className={`px-3 py-1 text-xs rounded-lg transition-colors ${
             isDarkMode 
               ? 'bg-white/10 hover:bg-white/20 text-zinc-200' 
-              : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
+              : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
           }`}
         >
           Restore

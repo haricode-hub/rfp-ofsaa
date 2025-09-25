@@ -23,14 +23,14 @@ export default function HelpModal({ isOpen, onClose, isDarkMode }: HelpModalProp
         className={`relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
           isDarkMode 
             ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-            : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+            : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <h2 className="text-2xl font-medium" style={{ fontWeight: FONT_STYLES.fontWeight.medium }}>
             📝 Markdown Canvas Guide
@@ -40,7 +40,7 @@ export default function HelpModal({ isOpen, onClose, isDarkMode }: HelpModalProp
             className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
               isDarkMode 
                 ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
             }`}
           >
             <XMarkIcon className="h-6 w-6" />
@@ -58,14 +58,14 @@ export default function HelpModal({ isOpen, onClose, isDarkMode }: HelpModalProp
         <div className={`flex-shrink-0 flex justify-end p-6 border-t backdrop-blur-sm rounded-b-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <button
             onClick={onClose}
             className={`px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg ${
               isDarkMode 
                 ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+                : 'bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200/50 shadow-blue-200/30'
             }`}
             style={{ fontWeight: FONT_STYLES.fontWeight.medium }}
           >
@@ -128,7 +128,7 @@ function KeyboardShortcutsSection({ isDarkMode }: { isDarkMode: boolean }) {
           <div key={index} className={`p-4 rounded-lg border shadow-sm ${
             isDarkMode 
               ? 'bg-white/[0.03] border-white/10' 
-              : 'bg-[#FFF8F0] border-amber-200/50'
+              : 'bg-blue-50/30 border-blue-200/50'
           }`}>
             <div className="flex justify-between items-center mb-2">
               <div className="flex gap-1 items-center">
@@ -142,7 +142,7 @@ function KeyboardShortcutsSection({ isDarkMode }: { isDarkMode: boolean }) {
                     <kbd className={`px-3 py-1.5 text-xs rounded-full ${
                       isDarkMode 
                         ? 'bg-white/10 text-zinc-300' 
-                        : 'bg-amber-100 text-amber-900'
+                        : 'bg-blue-100 text-blue-900'
                     }`}>{key}</kbd>
                   </React.Fragment>
                 ))}
@@ -186,7 +186,7 @@ function MarkdownSyntaxSection({ isDarkMode }: { isDarkMode: boolean }) {
             <div className={`p-3 rounded-lg text-sm font-mono border ${
               isDarkMode 
                 ? 'bg-white/[0.03] border-white/10' 
-                : 'bg-[#FFF8F0] border-amber-200/50'
+                : 'bg-blue-50/30 border-blue-200/50'
             }`}>
               {item.examples.map((example, i) => (
                 <div key={i}>{example}</div>
@@ -217,7 +217,7 @@ function AdvancedFeaturesSection({ isDarkMode }: { isDarkMode: boolean }) {
           <div key={index} className={`p-4 rounded-lg border shadow-sm ${
             isDarkMode 
               ? 'bg-white/[0.03] border-white/10' 
-              : 'bg-[#FFF8F0] border-amber-200/50'
+              : 'bg-blue-50/30 border-blue-200/50'
           }`}>
             <h4 className="mb-2" style={{ fontWeight: FONT_STYLES.fontWeight.medium }}>
               {feature.icon} {feature.title}

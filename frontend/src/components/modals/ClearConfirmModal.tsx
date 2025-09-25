@@ -29,14 +29,14 @@ export default function ClearConfirmModal({
         className={`relative w-full max-w-md flex flex-col rounded-3xl shadow-2xl backdrop-blur-xl border-2 ${
           isDarkMode 
             ? 'bg-zinc-900/95 text-zinc-100 border-white/20 shadow-black/50' 
-            : 'bg-white/95 text-gray-900 border-amber-200/60 shadow-black/20'
+            : 'bg-white/95 text-gray-900 border-blue-200/60 shadow-black/20'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`flex-shrink-0 flex items-center justify-between p-6 border-b backdrop-blur-sm rounded-t-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <h2 className="text-xl font-medium" style={{ fontWeight: FONT_STYLES.fontWeight.medium }}>
             Clear Document
@@ -46,7 +46,7 @@ export default function ClearConfirmModal({
             className={`p-2 rounded-2xl transition-all duration-200 shadow-lg ${
               isDarkMode 
                 ? 'hover:bg-white/10 text-zinc-300/90 hover:text-zinc-200 shadow-white/10' 
-                : 'hover:bg-amber-100 text-gray-600 hover:text-amber-900 shadow-black/10'
+                : 'hover:bg-blue-100 text-gray-600 hover:text-blue-900 shadow-black/10'
             }`}
           >
             <XMarkIcon className="h-6 w-6" />
@@ -62,7 +62,7 @@ export default function ClearConfirmModal({
         <div className={`flex-shrink-0 flex justify-end gap-3 p-6 border-t backdrop-blur-sm rounded-b-3xl ${
           isDarkMode 
             ? 'border-white/20 bg-zinc-900/90' 
-            : 'border-amber-200/50 bg-white/90'
+            : 'border-blue-200/50 bg-white/90'
         }`}>
           <button
             onClick={onClose}
