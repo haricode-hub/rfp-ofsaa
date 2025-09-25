@@ -202,21 +202,21 @@ export default function TextSelectionToolbar({
           <button
             onClick={handleAskWrite}
             className={`px-4 py-2 text-sm rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg ${
-              isDarkMode 
-                ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+              isDarkMode
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 shadow-blue-500/20'
+                : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 shadow-blue-500/30'
             }`}
             style={{ fontWeight: FONT_STYLES.fontWeight.medium }}
           >
             Ask/write
           </button>
-          
+
           <button
             onClick={handleMoveToCanvas}
             className={`px-4 py-2 text-sm rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg ${
-              isDarkMode 
-                ? 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 shadow-white/10' 
-                : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200/50 shadow-amber-200/30'
+              isDarkMode
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 shadow-blue-500/20'
+                : 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 shadow-blue-500/30'
             }`}
             style={{ fontWeight: FONT_STYLES.fontWeight.medium }}
           >
