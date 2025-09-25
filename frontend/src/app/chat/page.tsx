@@ -240,6 +240,26 @@ function ChatInterface() {
     }
   }, [textToMoveToCanvas]);
 
+  // Handle canvas download
+  const handleDownload = () => {
+    const currentContent = canvasRef.current?.getHistory().slice(-1)[0]?.value || "";
+    if (!currentContent.trim()) {
+      alert("No content to download. Please add some content to the canvas first.");
+      return;
+    }
+
+    // Create download
+    const blob = new Blob([currentContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${canvasName || 'canvas'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Handle chat submission
   const handleChatSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -783,7 +803,11 @@ function ChatInterface() {
                 >
                   <ArrowUturnRightIcon className="h-5 w-5" />
                 </button>
-                <button className="btn btn-secondary btn-sm p-1">
+                <button
+                  onClick={handleDownload}
+                  className="btn btn-secondary btn-sm p-1"
+                  title="Download Canvas Content"
+                >
                   <ArrowDownTrayIcon className="h-5 w-5" />
                 </button>
                 <button
