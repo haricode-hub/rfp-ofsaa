@@ -856,9 +856,10 @@ function ChatInterface() {
               <button
                 onClick={restoreCanvas}
                 className="btn btn-primary flex items-center gap-1.5"
+                style={{ padding: '0.45rem 0.7rem' }}
                 aria-label="Restore canvas"
               >
-                <span className="text-xs font-medium">{canvasName}</span>
+                <span className="text-sm font-medium">{canvasName}</span>
                 <ChevronDownIcon className="h-4 w-4" />
               </button>
             </div>
