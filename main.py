@@ -14,6 +14,14 @@ from services.presales import presales_service, ProcessRequest
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Reduce Docling logging verbosity
+logging.getLogger('docling').setLevel(logging.WARNING)
+logging.getLogger('docling.document_converter').setLevel(logging.WARNING)
+logging.getLogger('docling.pipeline').setLevel(logging.WARNING)
+logging.getLogger('docling.datamodel').setLevel(logging.WARNING)
+logging.getLogger('docling.models').setLevel(logging.WARNING)
+logging.getLogger('docling.utils').setLevel(logging.WARNING)
+
 
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
