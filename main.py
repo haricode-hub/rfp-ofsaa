@@ -68,27 +68,31 @@ async def upload_document(file: UploadFile = File(...)):
 
         # For other file types, use Docling conversion
         suffix = allowed_types.get(file.content_type, '')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
-            temp_file.write(content)
-            temp_file.flush()
 
-            try:
-                # Convert document using docling
-                result = converter.convert(temp_file.name)
-                markdown_content = result.document.export_to_markdown()
+        # Create temp file and close it immediately to avoid Windows file locking issues
+        temp_fd, temp_file_path = tempfile.mkstemp(suffix=suffix)
+        try:
+            # Write content and close file handle
+            with os.fdopen(temp_fd, 'wb') as temp_file:
+                temp_file.write(content)
 
-                return {
-                    "filename": file.filename,
-                    "content": markdown_content,
-                    "status": "success"
-                }
+            # Convert document using docling (file handle is now closed)
+            result = converter.convert(temp_file_path)
+            markdown_content = result.document.export_to_markdown()
 
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
+            return {
+                "filename": file.filename,
+                "content": markdown_content,
+                "status": "success"
+            }
 
-            finally:
-                # Clean up temporary file
-                os.unlink(temp_file.name)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
+
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
                 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
