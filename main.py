@@ -50,28 +50,42 @@ async def upload_document(file: UploadFile = File(...)):
         
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
-        
-        # Create temporary file
+
+        content = await file.read()
+
+        # Handle txt and md files directly with open()
+        if file.content_type in ['text/plain', 'text/markdown']:
+            try:
+                # Decode text content directly
+                text_content = content.decode('utf-8')
+                return {
+                    "filename": file.filename,
+                    "content": text_content,
+                    "status": "success"
+                }
+            except UnicodeDecodeError:
+                raise HTTPException(status_code=400, detail="Unable to decode text file. Please ensure it's UTF-8 encoded.")
+
+        # For other file types, use Docling conversion
         suffix = allowed_types.get(file.content_type, '')
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
-            content = await file.read()
             temp_file.write(content)
             temp_file.flush()
-            
+
             try:
                 # Convert document using docling
                 result = converter.convert(temp_file.name)
                 markdown_content = result.document.export_to_markdown()
-                
+
                 return {
                     "filename": file.filename,
                     "content": markdown_content,
                     "status": "success"
                 }
-                
+
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Error converting document: {str(e)}")
-            
+
             finally:
                 # Clean up temporary file
                 os.unlink(temp_file.name)
