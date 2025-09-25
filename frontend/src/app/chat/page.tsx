@@ -536,8 +536,9 @@ function ChatInterface() {
           {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
-            className="btn btn-secondary p-2"
+            className="btn btn-secondary"
             style={{
+              padding: '0.45rem',
               backgroundColor: 'var(--bg-secondary)',
               color: 'var(--blue-primary)',
               borderColor: 'var(--border-color)'
@@ -556,6 +557,7 @@ function ChatInterface() {
             onClick={handleFileSelect}
             disabled={isUploading}
             className="btn btn-primary flex items-center gap-2"
+            style={{ padding: '0.45rem 0.7rem' }}
             aria-label="Upload file"
           >
             <ArrowUpTrayIcon className="h-5 w-5" />
@@ -569,6 +571,7 @@ function ChatInterface() {
             <button
               onClick={() => setShowClearConfirm(true)}
               className="btn btn-secondary flex items-center gap-2"
+              style={{ padding: '0.45rem 0.7rem' }}
               aria-label="Clear document"
             >
               <XMarkIcon className="h-5 w-5" />
