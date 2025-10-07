@@ -19,14 +19,14 @@ function HomeContent() {
       <section className="pt-32 pb-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="heading-1-hero mb-6">
-            Powerful Document
+            Intelligent Platform
             <span className="block" style={{ color: 'var(--text-secondary)' }}>
-              Processing Tools
+              for Business Transformation
             </span>
           </h1>
           <p className="body-text-large mb-10 max-w-2xl mx-auto">
-            Streamline your workflow with AI-powered document analysis, Excel processing,
-            and professional document generation tools.
+            Streamline every process with integrated AI and Leverage predictive analytics,
+            smart document agents, and automated workflows to drive business efficiency
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -57,7 +57,7 @@ function HomeContent() {
               Our Services
             </h2>
             <p className="body-text-large max-w-2xl mx-auto">
-              Choose from our suite of powerful tools designed to enhance your document processing workflow
+              Choose from our suite of powerful tools designed to enhance productivity
             </p>
           </div>
 
@@ -155,12 +155,7 @@ function HomeContent() {
             About Our Platform
           </h2>
           <p className="body-text-large mb-8">
-            SensAi is the hub of AI-powered tools within our organization,
-            designed to handle every type of document—Excel, PDFs, Word files, and more.
-            Beyond streamlining document management, SensAi enables intelligent content generation
-            and in-depth analysis using AI. By combining advanced artificial intelligence with an intuitive interface,
-             SensAi empowers teams to process, create,
-            and analyze documents efficiently, ensuring smarter workflows and faster results.
+            SensAI is our organization's hub for intelligent automation and productivity—going far beyond document generation. It orchestrates AI-powered workflows; automates repetitive tasks; and applies advanced analytics and recommendations to drive better decisions. With an intuitive interface and governance-ready design, SensAI helps teams create, process, and analyze content, integrate with business systems, and streamline end-to-end operations for faster, smarter results.
           </p>
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <div className="text-center">

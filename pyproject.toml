@@ -3,7 +3,7 @@ name = "rfp-ofsaa"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = "==3.13.5"
+requires-python = ">=3.13.0,<3.14"
 dependencies = [
     "docling>=2.44.0",
     "fastapi>=0.116.1",
@@ -23,6 +23,8 @@ dependencies = [
     "openpyxl>=3.1.0",
     "loguru>=0.7.0",
     "mcp>=1.0.0",
+    "hf-xet>=1.1.7",
+    "reportlab>=4.4.4",
 ]
 
 [dependency-groups]

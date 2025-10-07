@@ -1,6 +1,19 @@
 import { useState, useCallback, useRef } from 'react';
 import { SPACING, TIMING } from '@/constants/theme';
 
+// Compatible UUID generation function
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 interface HistoryState<T> {
   value: T;
   canUndo: boolean;
@@ -24,7 +37,7 @@ export function useHistory<T>(initialValue: T, maxHistory: number = SPACING.maxH
     {
       value: initialValue,
       timestamp: Date.now(),
-      id: crypto.randomUUID()
+      id: generateId()
     }
   ]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -63,7 +76,7 @@ export function useHistory<T>(initialValue: T, maxHistory: number = SPACING.maxH
         newHistory.push({
           value: newValue,
           timestamp: Date.now(),
-          id: crypto.randomUUID()
+          id: generateId()
         });
 
         if (newHistory.length > maxHistory) {
@@ -99,7 +112,7 @@ export function useHistory<T>(initialValue: T, maxHistory: number = SPACING.maxH
     setHistory([{
       value: initialValue,
       timestamp: Date.now(),
-      id: crypto.randomUUID()
+      id: generateId()
     }]);
     setCurrentIndex(0);
   }, [initialValue]);

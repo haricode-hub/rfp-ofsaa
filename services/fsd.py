@@ -9,18 +9,14 @@ import numpy as np
 import os
 import io
 import logging
-import asyncio
 from datetime import datetime
-from typing import Optional, Dict, Any, List, Union
-from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from openai import AsyncOpenAI, OpenAI
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 from dotenv import load_dotenv
 import PyPDF2
 import pdfplumber
