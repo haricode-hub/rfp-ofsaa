@@ -99,7 +99,7 @@ src/
 - **QDRANT_API_KEY**: Optional for Qdrant vector search capabilities
 - **SMITHERY_API_KEY**: Required for presales agent web search capabilities
 - **SMITHERY_PROFILE**: Required for Smithery.ai Exa search configuration
-- Backend runs on `0.0.0.0:8000`, frontend on `localhost:3000`
+- Backend runs on `0.0.0.0:8505`, frontend on `192.168.2.95:3505`
 
 ### Document Conversion
 - **Docling Integration**: Main conversion engine in `main.py:27-72`
@@ -142,7 +142,8 @@ src/
 - **Response Types**: Yes/No/Partially/Not Found with professional explanations
 - **Batch Processing**: Concurrent processing with configurable batch sizes
 - **Caching**: Search result caching to optimize performance
-- **Output**: Professionally formatted Excel with enhanced styling and detailed remarks
+- **Output**: Professionally formatted Excel with enhanced styling and detailed remarks (no reference links in Excel, shown in terminal only)
+- **Emoji-Free**: All output is Windows-compatible without Unicode emojis
 
 ## Testing and Quality
 

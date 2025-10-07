@@ -266,17 +266,17 @@ async def exa_search(query: str, row_index: Optional[int] = None) -> Dict[str, A
                     # Enhanced terminal display
                     if row_index is not None:
                         print(f"\n{'='*120}")
-                        print(f"🔍 ROW {row_index + 1} - COMPREHENSIVE SEARCH ANALYSIS")
+                        print(f" ROW {row_index + 1} - COMPREHENSIVE SEARCH ANALYSIS")
                         print(f"{'='*120}")
-                        print(f"📝 Search Query: '{query}'")
-                        print(f"🎯 Cache Status: {'HIT' if cache_key in search_cache else 'MISS'}")
-                        print(f"📊 Results Quality: {len(results)} detailed results found")
-                        print(f"🏆 Evidence Strength: {evidence_strength}")
+                        print(f" Search Query: '{query}'")
+                        print(f" Cache Status: {'HIT' if cache_key in search_cache else 'MISS'}")
+                        print(f" Results Quality: {len(results)} detailed results found")
+                        print(f" Evidence Strength: {evidence_strength}")
 
                         if urls_found:
-                            print(f"\n🔗 REFERENCE SOURCES FOUND ({len(urls_found)} total):")
-                            print(f"   📋 Oracle Official Sources: {oracle_sources}")
-                            print(f"   🌐 Community/Industry Sources: {community_sources}")
+                            print(f"\n REFERENCE SOURCES FOUND ({len(urls_found)} total):")
+                            print(f"    Oracle Official Sources: {oracle_sources}")
+                            print(f"    Community/Industry Sources: {community_sources}")
 
                             for i, (url, source_type) in enumerate(zip(urls_found[:8], source_types[:8]), 1):
                                 print(f"   {i}. [{source_type}]")
@@ -284,30 +284,30 @@ async def exa_search(query: str, row_index: Optional[int] = None) -> Dict[str, A
 
                         if source_types:
                             unique_source_types = list(set(source_types))
-                            print(f"\n📚 SOURCE CATEGORIES COVERED ({len(unique_source_types)}):")
+                            print(f"\n SOURCE CATEGORIES COVERED ({len(unique_source_types)}):")
                             for st in unique_source_types:
                                 count = source_types.count(st)
                                 print(f"   • {st} ({count} sources)")
 
-                        print(f"\n📋 DETAILED SEARCH RESULTS:")
+                        print(f"\n DETAILED SEARCH RESULTS:")
                         if results:
                             for i, result in enumerate(results[:4], 1):
-                                print(f"\n   📄 Result {i}:")
+                                print(f"\n    Result {i}:")
                                 lines = result.split('\n')
                                 for line in lines:
                                     print(f"      {textwrap.fill(line, width=100, subsequent_indent='      ')}")
                         else:
-                            print("   ❌ No detailed results found")
+                            print("    No detailed results found")
 
-                        print(f"\n🎯 ASSESSMENT GUIDANCE:")
+                        print(f"\n ASSESSMENT GUIDANCE:")
                         if evidence_strength == "High":
-                            print("   ✅ Strong evidence available - should support decisive Yes/No responses")
+                            print("    Strong evidence available - should support decisive Yes/No responses")
                         elif evidence_strength == "Moderate":
-                            print("   ⚡ Moderate evidence - evaluate specific findings for appropriate response")
+                            print("    Moderate evidence - evaluate specific findings for appropriate response")
                         elif evidence_strength == "Limited":
-                            print("   ⚠️  Limited evidence - may warrant 'Partially' or 'Not found' response")
+                            print("     Limited evidence - may warrant 'Partially' or 'Not found' response")
                         else:
-                            print("   ❌ No evidence - should result in 'Not found' response")
+                            print("    No evidence - should result in 'Not found' response")
 
                         print(f"{'='*120}\n")
 
@@ -330,7 +330,7 @@ async def exa_search(query: str, row_index: Optional[int] = None) -> Dict[str, A
         except Exception as e:
             error_msg = f"Web search failed: {str(e)}"
             if row_index is not None:
-                print(f"\n❌ ROW {row_index + 1} - SEARCH ERROR")
+                print(f"\n ROW {row_index + 1} - SEARCH ERROR")
                 print(f"{'='*80}")
                 print(f"Query: '{query}'")
                 print(f"Error: {error_msg}")
@@ -374,7 +374,7 @@ async def call_openai(messages: list, max_tokens: int = 600, retry_count: int = 
 # Enhanced Column Value Extraction
 # ===============================
 def extract_column_values(text: str, output_cols: List[str], search_info: Dict[str, Any]) -> Dict[str, str]:
-    """Enhanced column value extraction with response-specific formatting (NO LINKS IN EXCEL)"""
+    """Enhanced column value extraction with response-specific formatting (INCLUDING LINKS)"""
     column_mapping = {
         "RESPONSE": "TENDERER'S RESPONSE",
         "REMARK": "TENDERER'S REMARK",
@@ -816,19 +816,19 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
                         {"role": "user", "content": full_prompt}
                     ]
 
-                    print(f"\n🔄 SENDING TO AI ANALYSIS")
+                    print(f"\n SENDING TO AI ANALYSIS")
                     print(f"{'='*100}")
-                    print(f"🎯 Row: {index + 1}")
-                    print(f"📊 Evidence Strength: {evidence_strength}")
-                    print(f"🏢 Oracle Sources: {oracle_sources}")
-                    print(f"🌐 Community Sources: {community_sources}")
-                    print(f"📚 Source Categories: {len(set(source_types))}")
-                    print(f"🤖 Model: {MODEL_NAME} | Max Tokens: 600 (Speed Optimized)")
+                    print(f" Row: {index + 1}")
+                    print(f" Evidence Strength: {evidence_strength}")
+                    print(f" Oracle Sources: {oracle_sources}")
+                    print(f" Community Sources: {community_sources}")
+                    print(f" Source Categories: {len(set(source_types))}")
+                    print(f" Model: {MODEL_NAME} | Max Tokens: 600 (Speed Optimized)")
                     print(f"{'='*100}")
 
                     ai_response = await call_openai(messages, max_tokens=600)  # Reduced tokens for faster response
 
-                    print(f"\n🎉 AI RESPONSE RECEIVED:")
+                    print(f"\n AI RESPONSE RECEIVED:")
                     print(f"{'='*80}")
                     print(f"{ai_response}")
                     print(f"{'='*80}")
@@ -845,47 +845,29 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
 
                     elapsed = time.time() - start_time
 
-                    print(f"\n✅ ROW {index + 1} - PROCESSING COMPLETED")
+                    print(f"\n ROW {index + 1} - PROCESSING COMPLETED")
                     print(f"{'='*120}")
-                    print(f"⏱️  Processing Time: {elapsed:.2f} seconds")
-                    print(f"🔍 Total Sources Analyzed: {len(sources)}")
-                    print(f"🏆 Evidence Quality: {evidence_strength}")
-
-                    # Show detailed source breakdown in terminal only
-                    if sources:
-                        print(f"\n🌐 DETAILED SOURCE ANALYSIS (Terminal Only):")
-                        if oracle_sources > 0:
-                            oracle_urls = [url for url in sources if 'oracle.com' in url.lower()]
-                            oracle_types = [st for url, st in zip(sources, source_types) if 'oracle.com' in url.lower()]
-                            print(f"   🏢 Oracle Official Sources ({oracle_sources}):")
-                            for url, st in zip(oracle_urls[:3], oracle_types[:3]):
-                                print(f"      • [{st}] {url}")
-
-                        if community_sources > 0:
-                            community_urls = [url for url in sources if 'oracle.com' not in url.lower()]
-                            community_types = [st for url, st in zip(sources, source_types) if 'oracle.com' not in url.lower()]
-                            print(f"   🌍 Industry & Technical Sources ({community_sources}):")
-                            for url, st in zip(community_urls[:2], community_types[:2]):
-                                print(f"      • [{st}] {url}")
-
-                    print(f"\n📊 FINAL EXTRACTED VALUES (Excel Output):")
+                    print(f"  Processing Time: {elapsed:.2f} seconds")
+                    print(f" Total Sources Analyzed: {len(sources)}")
+                    print(f" Evidence Quality: {evidence_strength}")
+                    print(f" FINAL EXTRACTED VALUES:")
                     for col, val in result.items():
-                        print(f"\n   📋 {col}:")
+                        print(f"\n    {col}:")
                         # Improved display formatting
                         val_preview = val[:300] + "..." if len(val) > 300 else val
                         print(f"      {textwrap.fill(val_preview, width=95, subsequent_indent='      ')}")
-                    print(f"\n🎯 Assessment Quality: {'High confidence' if evidence_strength == 'High' else 'Moderate confidence' if evidence_strength == 'Moderate' else 'Limited confidence' if evidence_strength == 'Limited' else 'Insufficient evidence'}")
+                    print(f"\n Assessment Quality: {'High confidence' if evidence_strength == 'High' else 'Moderate confidence' if evidence_strength == 'Moderate' else 'Limited confidence' if evidence_strength == 'Limited' else 'Insufficient evidence'}")
                     print(f"{'='*120}")
 
                     return index, result
 
                 except Exception as e:
                     elapsed = time.time() - start_time
-                    print(f"\n❌ ROW {index + 1} - PROCESSING ERROR")
+                    print(f"\n ROW {index + 1} - PROCESSING ERROR")
                     print(f"{'='*100}")
-                    print(f"⏱️  Time Elapsed: {elapsed:.2f} seconds")
-                    print(f"🚨 Error Details: {str(e)}")
-                    print(f"📝 Input Preview: {input_text[:200]}...")
+                    print(f"  Time Elapsed: {elapsed:.2f} seconds")
+                    print(f" Error Details: {str(e)}")
+                    print(f" Input Preview: {input_text[:200]}...")
                     print(f"{'='*100}")
 
                     error_result = {col: f"Processing error: {str(e)[:150]}..." for col in output_cols}
@@ -925,69 +907,69 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
                     # Process batch results and update statistics
                     for result in batch_results:
                         if isinstance(result, Exception):
-                            print(f"\n❌ BATCH ERROR: {result}")
+                            print(f"\n BATCH ERROR: {result}")
                             continue
 
                         idx, row_results = result
                         for col, val in row_results.items():
                             df.at[idx, col] = str(val)  # Convert to string to avoid pandas warnings
 
-                        print(f"\n💾 ROW {idx + 1} - EXCEL DATA UPDATED")
+                        print(f"\n ROW {idx + 1} - EXCEL DATA UPDATED")
                         print(f"{'='*90}")
-                        print(f"📊 FINAL COLUMN VALUES IN EXCEL:")
+                        print(f" FINAL COLUMN VALUES IN EXCEL:")
                         for col in output_cols:
                             excel_value = df.at[idx, col]
                             val_display = str(excel_value)[:200] + "..." if len(str(excel_value)) > 200 else str(excel_value)
-                            print(f"\n   📋 {col}:")
+                            print(f"\n    {col}:")
                             print(f"      {textwrap.fill(val_display, width=80, subsequent_indent='      ')}")
                         print(f"{'='*90}")
 
                     completed = batch_end
                     progress = (completed / total_rows) * 100
 
-                    print(f"\n🚀 BATCH PROGRESS UPDATE")
+                    print(f"\n BATCH PROGRESS UPDATE")
                     print(f"{'='*80}")
-                    print(f"✅ Completed: {completed}/{total_rows} rows ({progress:.1f}%)")
-                    print(f"⏱️  Batch Time: {batch_elapsed:.2f}s | Avg per Row: {batch_elapsed/len(batch_rows):.2f}s")
-                    print(f"💾 Cache Size: {len(search_cache)} entries")
-                    print(f"🎯 Processing Quality: Enhanced evidence-based analysis active")
+                    print(f" Completed: {completed}/{total_rows} rows ({progress:.1f}%)")
+                    print(f"  Batch Time: {batch_elapsed:.2f}s | Avg per Row: {batch_elapsed/len(batch_rows):.2f}s")
+                    print(f" Cache Size: {len(search_cache)} entries")
+                    print(f" Processing Quality: Enhanced evidence-based analysis active")
                     print(f"{'='*80}")
 
                     if batch_end < total_rows:
-                        print(f"\n⏸️  Brief pause before next batch...")
+                        print(f"\n  Brief pause before next batch...")
                         await asyncio.sleep(0.5)
 
                 total_elapsed = time.time() - overall_start
 
-                print(f"\n🎊 ENHANCED PROCESSING COMPLETED!")
+                print(f"\n ENHANCED PROCESSING COMPLETED!")
                 print(f"{'='*120}")
-                print(f"📊 COMPREHENSIVE FINAL STATISTICS:")
-                print(f"   ✅ Total Rows Processed: {total_rows}")
-                print(f"   ⏱️  Total Processing Time: {total_elapsed:.2f} seconds")
-                print(f"   📈 Average Time per Row: {total_elapsed/total_rows:.2f} seconds")
-                print(f"   💾 Final Cache Size: {len(search_cache)} entries")
+                print(f" COMPREHENSIVE FINAL STATISTICS:")
+                print(f"    Total Rows Processed: {total_rows}")
+                print(f"     Total Processing Time: {total_elapsed:.2f} seconds")
+                print(f"    Average Time per Row: {total_elapsed/total_rows:.2f} seconds")
+                print(f"    Final Cache Size: {len(search_cache)} entries")
 
                 # Analyze cache for quality metrics
                 cache_with_sources = sum(1 for v in search_cache.values() if isinstance(v, dict) and len(v.get('sources', [])) > 0)
                 cache_hit_rate = (cache_with_sources / max(1, len(search_cache))) * 100
 
-                print(f"   🎯 Cache Quality: {cache_hit_rate:.1f}% entries with sources")
-                print(f"   🔍 Search Effectiveness: Enhanced source tracking and evidence analysis")
-                print(f"   🏆 Assessment Quality: Evidence-based evaluation with bias reduction")
-                print(f"   📚 Source Integration: Comprehensive source type analysis and referencing")
+                print(f"    Cache Quality: {cache_hit_rate:.1f}% entries with sources")
+                print(f"    Search Effectiveness: Enhanced source tracking and evidence analysis")
+                print(f"    Assessment Quality: Evidence-based evaluation with bias reduction")
+                print(f"    Source Integration: Comprehensive source type analysis and referencing")
                 print(f"{'='*120}")
 
             # Start enhanced processing
-            print(f"\n🚀 STARTING ENHANCED EXCEL PROCESSING")
+            print(f"\n STARTING ENHANCED EXCEL PROCESSING")
             print(f"{'='*120}")
-            print(f"📊 Enhanced Processing Parameters:")
-            print(f"   📝 Total Rows: {len(df)}")
-            print(f"   📥 Input Columns: {', '.join(input_cols)}")
-            print(f"   📤 Output Columns: {', '.join(output_cols)}")
-            print(f"   🔄 Batch Size: {BATCH_SIZE}")
-            print(f"   🤖 AI Model: {MODEL_NAME} (Enhanced prompting)")
-            print(f"   💾 Max Cache Size: {CACHE_SIZE}")
-            print(f"   🎯 Key Enhancements:")
+            print(f" Enhanced Processing Parameters:")
+            print(f"    Total Rows: {len(df)}")
+            print(f"    Input Columns: {', '.join(input_cols)}")
+            print(f"    Output Columns: {', '.join(output_cols)}")
+            print(f"    Batch Size: {BATCH_SIZE}")
+            print(f"    AI Model: {MODEL_NAME} (Enhanced prompting)")
+            print(f"    Max Cache Size: {CACHE_SIZE}")
+            print(f"    Key Enhancements:")
             print(f"      • Unbiased response evaluation")
             print(f"      • Comprehensive source tracking")
             print(f"      • Evidence strength assessment")
@@ -1039,7 +1021,7 @@ CRITICAL: Only include "Reference Sources Consulted" for YES and PARTIALLY respo
 
             return ProcessResponse(
                 file_id=file_id,
-                message=f"✅ Enhanced processing completed successfully - {len(df)} rows analyzed with comprehensive evidence-based evaluation",
+                message=f" Enhanced processing completed successfully - {len(df)} rows analyzed with comprehensive evidence-based evaluation",
                 processing_stats={
                     "total_rows": len(df),
                     "cache_entries": len(search_cache),
