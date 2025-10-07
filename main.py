@@ -32,11 +32,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3505",
-        "http://127.0.0.1:3505",
         "http://192.168.2.95:3505",
-        "http://betasensai.jmrinfotech.com:3505",
-        "http://betasensai.jmrinfotech.com",
-        "https://betasensai.jmrinfotech.com"
     ],  # Next.js dev server
     allow_credentials=True,
     allow_methods=["*"],
