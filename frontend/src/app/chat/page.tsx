@@ -43,6 +43,7 @@ function ChatInterface() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showUploadConfirm, setShowUploadConfirm] = useState(false);
   const [chatQuery, setChatQuery] = useState<string>("");
+  const [enableWebSearch, setEnableWebSearch] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState(false);
   interface HistoryEntry {
     value: string;
@@ -54,6 +55,7 @@ function ChatInterface() {
   const [canRedo, setCanRedo] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const multiPdfInputRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<MarkdownCanvasRef>(null);
 
@@ -165,30 +167,55 @@ function ChatInterface() {
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
     setIsUploading(true);
     setShowProgress(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-
       const protocol = window.location.protocol;
-      const apiUrl = `${protocol}//192.168.2.95:8505/upload-document`;
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      // Check if multiple PDFs selected
+      const pdfFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+      if (files.length > 1 && pdfFiles.length === files.length) {
+        // Multiple PDFs - use batch endpoint
+        for (const file of files) {
+          formData.append('files', file);
+        }
+        const apiUrl = `${protocol}//192.168.2.95:8505/upload-multiple-documents`;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setDocumentContent(result.content);
+        setDocumentFilename(result.filename);
+      } else {
+        // Single file - use existing endpoint
+        formData.append('file', files[0]);
+        const apiUrl = `${protocol}//192.168.2.95:8505/upload-document`;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setDocumentContent(result.content);
+        setDocumentFilename(result.filename);
       }
-
-      const result = await response.json();
-      setDocumentContent(result.content);
-      setDocumentFilename(result.filename);
       
       // Clear any selected text reference from previous file
       setSelectedTextReference("");
@@ -297,7 +324,8 @@ function ChatInterface() {
         body: JSON.stringify({
           query: currentQuery,
           context: currentContext,
-          canvas_content: canvasRef.current?.getHistory().slice(-1)[0]?.value || ""
+          canvas_content: canvasRef.current?.getHistory().slice(-1)[0]?.value || "",
+          enable_web_search: enableWebSearch
         })
       });
 
@@ -573,6 +601,20 @@ function ChatInterface() {
             </span>
           </button>
 
+          {/* Multiple PDFs button */}
+          <button
+            onClick={() => multiPdfInputRef.current?.click()}
+            disabled={isUploading}
+            className="btn btn-secondary flex items-center gap-2"
+            style={{ padding: '0.45rem 0.7rem' }}
+            aria-label="Upload multiple PDFs"
+          >
+            <ArrowUpTrayIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">
+              Multiple PDFs
+            </span>
+          </button>
+
           {/* Clear button - only show when there's content */}
           {documentContent && (
             <button
@@ -603,11 +645,19 @@ function ChatInterface() {
             </div>
           )}
           
-          {/* Hidden file input */}
+          {/* Hidden file inputs */}
           <input
             ref={fileInputRef}
             type="file"
             accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <input
+            ref={multiPdfInputRef}
+            type="file"
+            accept=".pdf"
+            multiple
             onChange={handleFileChange}
             className="hidden"
           />
@@ -676,6 +726,21 @@ function ChatInterface() {
                     </div>
                   )}
                   
+                  {/* Web Search Toggle */}
+                  <div className="flex items-center gap-2 px-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableWebSearch}
+                        onChange={(e) => setEnableWebSearch(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={`text-sm ${isDarkMode ? 'text-zinc-400' : 'text-gray-600'}`}>
+                        Enable web search
+                      </span>
+                    </label>
+                  </div>
+
                   {/* Composer */}
                   <div className="flex items-center gap-2">
                     <div className={`flex w-full items-center gap-3 rounded-full border px-4 py-3 transition-all backdrop-blur-xl shadow-lg ${

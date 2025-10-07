@@ -25,6 +25,7 @@ dependencies = [
     "mcp>=1.0.0",
     "hf-xet>=1.1.7",
     "reportlab>=4.4.4",
+    "duckduckgo-search>=8.1.1",
 ]
 
 [dependency-groups]

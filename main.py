@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -46,9 +49,11 @@ class ChatRequest(BaseModel):
     query: str
     context: str = ""
     canvas_content: str = ""
+    enable_web_search: bool = False
 
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...)):
+    """Upload single document"""
     try:
         # Log received file info for debugging
         logger.info(f"Received file: {file.filename}, content_type: {file.content_type}")
@@ -135,6 +140,60 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
+@app.post("/upload-multiple-documents")
+async def upload_multiple_documents(files: list[UploadFile] = File(...)):
+    """Upload multiple documents and combine their content"""
+    try:
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
+        def process_pdf(file_content: bytes, filename: str) -> tuple[str, str]:
+            """Process a single PDF file"""
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                temp_file.write(file_content)
+                temp_path = temp_file.name
+
+            try:
+                result = converter.convert(temp_path)
+                markdown_content = result.document.export_to_markdown()
+                return (filename, markdown_content)
+            finally:
+                os.unlink(temp_path)
+
+        # Validate all files first
+        for file in files:
+            if not file.filename or not file.filename.lower().endswith('.pdf'):
+                raise HTTPException(status_code=400, detail=f"Only PDF files are supported. Invalid: {file.filename}")
+
+        # Read all files
+        file_data = []
+        for file in files:
+            content = await file.read()
+            file_data.append((content, file.filename))
+
+        # Process all PDFs in parallel
+        with ThreadPoolExecutor(max_workers=min(len(files), 4)) as executor:
+            loop = asyncio.get_event_loop()
+            results = await asyncio.gather(*[
+                loop.run_in_executor(executor, process_pdf, content, filename)
+                for content, filename in file_data
+            ])
+
+        # Combine results
+        combined_content = ""
+        filenames = []
+        for filename, markdown_content in results:
+            combined_content += f"\n\n## Document: {filename}\n\n{markdown_content}"
+            filenames.append(filename)
+
+        return {
+            "filename": f"{len(filenames)} documents: {', '.join(filenames)}",
+            "content": combined_content,
+            "status": "success"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing files: {str(e)}")
+
 @app.post("/chat")
 async def chat_with_ai(request: ChatRequest):
     try:
@@ -142,7 +201,8 @@ async def chat_with_ai(request: ChatRequest):
             ai_service.generate_chat_stream(
                 query=request.query,
                 context=request.context,
-                canvas_content=request.canvas_content
+                canvas_content=request.canvas_content,
+                enable_web_search=request.enable_web_search
             ),
             media_type="text/plain",
             headers={
