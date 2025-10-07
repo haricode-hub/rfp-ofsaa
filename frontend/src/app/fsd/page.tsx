@@ -80,7 +80,8 @@ function FSDGeneratorContent() {
       const formData = new FormData();
       formData.append('file', uploadedFile);
 
-      const response = await fetch('http://localhost:8000/fsd/generate-from-document', {
+      const protocol = window.location.protocol;
+      const response = await fetch(`${protocol}//192.168.2.95:8505/fsd/generate-from-document`, {
         method: 'POST',
         body: formData
       });
@@ -93,7 +94,7 @@ function FSDGeneratorContent() {
       const result = await response.json();
       if (result.success && result.document_id) {
         // Download the actual document using the document_id
-        const downloadResponse = await fetch(`http://localhost:8000/fsd/download/${result.document_id}`);
+        const downloadResponse = await fetch(`${protocol}//192.168.2.95:8505/fsd/download/${result.document_id}`);
         if (!downloadResponse.ok) {
           throw new Error('Failed to download generated document');
         }
@@ -171,7 +172,7 @@ function FSDGeneratorContent() {
                      style={{
                        color: 'var(--text-secondary)'
                      }}>
-                    Upload a document and we'll generate a professional FSD from your content
+                    Upload a document and we&apos;ll generate a professional FSD from your content
                   </p>
                 </div>
 

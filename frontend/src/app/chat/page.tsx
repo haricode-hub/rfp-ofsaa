@@ -174,7 +174,10 @@ function ChatInterface() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/upload-document', {
+      const protocol = window.location.protocol;
+      const apiUrl = `${protocol}//192.168.2.95:8505/upload-document`;
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
       });
@@ -195,7 +198,8 @@ function ChatInterface() {
       
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert('Failed to upload and convert document. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to upload and convert document: ${errorMessage}\n\nCheck console for details.`);
     } finally {
       setIsUploading(false);
       setShowProgress(false);
@@ -282,7 +286,10 @@ function ChatInterface() {
     setSelectedTextReference("");
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const protocol = window.location.protocol;
+      const apiUrl = `${protocol}//192.168.2.95:8505/chat`;
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

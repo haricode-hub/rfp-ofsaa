@@ -27,7 +27,14 @@ app = FastAPI(title="Document Converter API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://localhost:3001"],  # Next.js dev server
+    allow_origins=[
+        "http://localhost:3505",
+        "http://127.0.0.1:3505",
+        "http://192.168.2.95:3505",
+        "http://betasensai.jmrinfotech.com:3505",
+        "http://betasensai.jmrinfotech.com",
+        "https://betasensai.jmrinfotech.com"
+    ],  # Next.js dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +50,9 @@ class ChatRequest(BaseModel):
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...)):
     try:
+        # Log received file info for debugging
+        logger.info(f"Received file: {file.filename}, content_type: {file.content_type}")
+
         # Validate file type
         allowed_types = {
             'application/pdf': '.pdf',
@@ -53,16 +63,32 @@ async def upload_document(file: UploadFile = File(...)):
             'application/vnd.ms-excel': '.xls',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
             'application/vnd.ms-powerpoint': '.ppt',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx'
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+            'application/octet-stream': None  # Will be determined by file extension
         }
-        
+
+        # Get file extension for fallback detection
+        file_extension = None
+        if file.filename:
+            file_extension = '.' + file.filename.lower().split('.')[-1]
+
+        # Check if MIME type is supported, or if it's octet-stream, check extension
         if file.content_type not in allowed_types:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}")
 
+        # For octet-stream, validate by file extension
+        if file.content_type == 'application/octet-stream':
+            allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.md', '.xls', '.xlsx', '.ppt', '.pptx']
+            if file_extension not in allowed_extensions:
+                raise HTTPException(status_code=400, detail=f"Unsupported file extension: {file_extension}")
+
         content = await file.read()
 
-        # Handle txt and md files directly with open()
-        if file.content_type in ['text/plain', 'text/markdown']:
+        # Handle txt and md files directly (check both MIME type and extension)
+        is_text_file = (file.content_type in ['text/plain', 'text/markdown'] or
+                       (file.content_type == 'application/octet-stream' and file_extension in ['.txt', '.md']))
+
+        if is_text_file:
             try:
                 # Decode text content directly
                 text_content = content.decode('utf-8')
@@ -75,7 +101,11 @@ async def upload_document(file: UploadFile = File(...)):
                 raise HTTPException(status_code=400, detail="Unable to decode text file. Please ensure it's UTF-8 encoded.")
 
         # For other file types, use Docling conversion
-        suffix = allowed_types.get(file.content_type, '')
+        # Determine suffix from MIME type or file extension
+        if file.content_type == 'application/octet-stream':
+            suffix = file_extension  # Use the actual file extension
+        else:
+            suffix = allowed_types.get(file.content_type, '')
 
         # Create temp file and close it immediately to avoid Windows file locking issues
         temp_fd, temp_file_path = tempfile.mkstemp(suffix=suffix)
@@ -277,4 +307,4 @@ async def clear_presales_cache():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8505, reload=True)

@@ -144,7 +144,8 @@ function PresalesAgentContent() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/presales/upload', {
+      const protocol = window.location.protocol;
+      const response = await fetch(`${protocol}//192.168.2.95:8505/presales/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -198,7 +199,8 @@ function PresalesAgentContent() {
         user_prompt: userPrompt.trim()
       };
 
-      const response = await fetch('http://localhost:8000/presales/process', {
+      const protocol = window.location.protocol;
+      const response = await fetch(`${protocol}//192.168.2.95:8505/presales/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +227,8 @@ function PresalesAgentContent() {
     if (!processResponse) return;
 
     try {
-      const downloadUrl = `http://localhost:8000/presales/download/${processResponse.file_id}`;
+      const protocol = window.location.protocol;
+      const downloadUrl = `${protocol}//192.168.2.95:8505/presales/download/${processResponse.file_id}`;
 
       const response = await fetch(downloadUrl, {
         method: 'GET',
