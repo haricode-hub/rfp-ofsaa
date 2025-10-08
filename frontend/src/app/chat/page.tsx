@@ -55,7 +55,6 @@ function ChatInterface() {
   const [canRedo, setCanRedo] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const multiPdfInputRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<MarkdownCanvasRef>(null);
 
@@ -176,11 +175,8 @@ function ChatInterface() {
       const formData = new FormData();
       const protocol = window.location.protocol;
 
-      // Check if multiple PDFs selected
-      const pdfFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
-
-      if (files.length > 1 && pdfFiles.length === files.length) {
-        // Multiple PDFs - use batch endpoint
+      if (files.length > 1) {
+        // Multiple files - use batch endpoint
         for (const file of files) {
           formData.append('files', file);
         }
@@ -192,12 +188,21 @@ function ChatInterface() {
         });
 
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
+          const errorData = await response.text();
+          console.error('Upload error response:', errorData);
+          throw new Error(`Upload failed: ${response.statusText} - ${errorData}`);
         }
 
         const result = await response.json();
         setDocumentContent(result.content);
         setDocumentFilename(result.filename);
+
+        // Show warnings if some files failed
+        if (result.warnings && result.warnings.length > 0) {
+          const warningMsg = `Successfully processed ${result.filename}, but some files failed:\n\n${result.warnings.join('\n')}`;
+          console.warn('Upload warnings:', result.warnings);
+          alert(warningMsg);
+        }
       } else {
         // Single file - use existing endpoint
         formData.append('file', files[0]);
@@ -216,13 +221,13 @@ function ChatInterface() {
         setDocumentContent(result.content);
         setDocumentFilename(result.filename);
       }
-      
+
       // Clear any selected text reference from previous file
       setSelectedTextReference("");
-      
+
       // Clear canvas content when new file is uploaded
       canvasRef.current?.reset();
-      
+
     } catch (error) {
       console.error('Error uploading file:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -593,25 +598,11 @@ function ChatInterface() {
             disabled={isUploading}
             className="btn btn-primary flex items-center gap-2"
             style={{ padding: '0.45rem 0.7rem' }}
-            aria-label="Upload file"
+            aria-label="Upload files"
           >
             <ArrowUpTrayIcon className="h-5 w-5" />
             <span className="text-sm font-medium">
               {isUploading ? 'Uploading...' : 'Upload'}
-            </span>
-          </button>
-
-          {/* Multiple PDFs button */}
-          <button
-            onClick={() => multiPdfInputRef.current?.click()}
-            disabled={isUploading}
-            className="btn btn-secondary flex items-center gap-2"
-            style={{ padding: '0.45rem 0.7rem' }}
-            aria-label="Upload multiple PDFs"
-          >
-            <ArrowUpTrayIcon className="h-5 w-5" />
-            <span className="text-sm font-medium">
-              Multiple PDFs
             </span>
           </button>
 
@@ -645,18 +636,11 @@ function ChatInterface() {
             </div>
           )}
           
-          {/* Hidden file inputs */}
+          {/* Hidden file input */}
           <input
             ref={fileInputRef}
             type="file"
             accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <input
-            ref={multiPdfInputRef}
-            type="file"
-            accept=".pdf"
             multiple
             onChange={handleFileChange}
             className="hidden"
@@ -965,21 +949,25 @@ function ChatInterface() {
               {/* Modal Content */}
               <div className="flex-1 p-8 flex flex-col items-center" style={{ fontWeight: 500 }}>
                 <p className={`text-sm text-center mb-6 ${isDarkMode ? 'text-zinc-300' : 'text-gray-700'}`}>
-                  Converting your document to markdown format...
+                  Converting your documents to markdown format...
+                  <br />
+                  <span className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    Processing with parallel conversion for maximum speed
+                  </span>
                 </p>
-                
+
                 {/* Squiggly Progress Bar */}
                 <div className="w-full max-w-xs">
                   <div className={`h-3 rounded-full overflow-hidden ${
                     isDarkMode ? 'bg-zinc-700' : 'bg-gray-200'
                   }`}>
                     <div className={`h-full w-full rounded-full squiggly-progress ${
-                      isDarkMode 
-                        ? 'text-blue-400' 
+                      isDarkMode
+                        ? 'text-blue-400'
                         : 'text-blue-600'
                     }`}></div>
                   </div>
-                  
+
                   {/* Progress Text */}
                   <div className="mt-4 text-center">
                     <span className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}>
