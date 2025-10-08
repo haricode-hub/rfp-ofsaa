@@ -122,12 +122,13 @@ def test_upload_txt_with_utf8_content(client):
     assert "世界" in response.json()["content"]
 
 def test_upload_invalid_mime_type(client):
-    """Test upload with unsupported MIME type"""
+    """Test upload with unsupported file extension"""
     content = b"MZ\x90\x00..."  # EXE signature
     files = {"file": ("test.exe", io.BytesIO(content), "application/x-msdownload")}
     response = client.post("/upload-document", files=files)
 
-    assert response.status_code in [400, 500]  # Can be validation or server error
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
 
 def test_upload_invalid_extension_octet_stream(client):
     """Test octet-stream with invalid extension"""
@@ -135,7 +136,8 @@ def test_upload_invalid_extension_octet_stream(client):
     files = {"file": ("test.exe", io.BytesIO(content), "application/octet-stream")}
     response = client.post("/upload-document", files=files)
 
-    assert response.status_code in [400, 500]  # Can be validation or server error
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
 
 def test_upload_non_utf8_txt_file(client):
     """Test text file with invalid UTF-8 encoding"""
@@ -143,22 +145,24 @@ def test_upload_non_utf8_txt_file(client):
     files = {"file": ("test.txt", io.BytesIO(content), "text/plain")}
     response = client.post("/upload-document", files=files)
 
-    assert response.status_code in [400, 500]  # Can be validation or server error
+    assert response.status_code == 400
+    assert "Unable to decode" in response.json()["detail"]
 
 def test_upload_empty_file(client):
     """Test upload with empty file"""
     files = {"file": ("empty.pdf", io.BytesIO(b""), "application/pdf")}
     response = client.post("/upload-document", files=files)
 
-    assert response.status_code in [400, 500]
+    assert response.status_code == 400
+    assert "empty" in response.json()["detail"].lower()
 
 def test_upload_no_filename(client, sample_pdf_content):
-    """Test upload without filename"""
+    """Test upload without filename - FastAPI validation"""
     files = {"file": ("", io.BytesIO(sample_pdf_content), "application/pdf")}
     response = client.post("/upload-document", files=files)
 
-    # FastAPI validation returns 422 for empty filename
-    assert response.status_code in [200, 400, 422, 500]
+    # FastAPI returns 422 for validation errors
+    assert response.status_code == 422
 
 def test_upload_docling_conversion_error(client, mock_docling_converter):
     """Test handling of Docling conversion errors"""
@@ -169,7 +173,7 @@ def test_upload_docling_conversion_error(client, mock_docling_converter):
     response = client.post("/upload-document", files=files)
 
     assert response.status_code == 500
-    assert "Error converting document" in response.json()["detail"]
+    assert "Error converting" in response.json()["detail"]
 
 def test_upload_temp_file_cleanup(client, sample_pdf_content, mock_docling_converter, mocker):
     """Test that temporary files are cleaned up"""
@@ -236,14 +240,15 @@ def test_upload_four_pdfs_parallel(client, sample_pdf_content, mock_docling_conv
     assert "4 documents" in response.json()["filename"]
 
 def test_upload_multiple_invalid_file_type(client):
-    """Test multiple upload with non-PDF file"""
+    """Test multiple upload with non-supported file extension"""
     files = [
         ("files", ("test1.pdf", io.BytesIO(b"%PDF"), "application/pdf")),
-        ("files", ("test.txt", io.BytesIO(b"text"), "text/plain"))
+        ("files", ("test.exe", io.BytesIO(b"text"), "application/octet-stream"))
     ]
     response = client.post("/upload-multiple-documents", files=files)
 
-    assert response.status_code in [400, 500]  # Can be validation or server error
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
 
 def test_upload_multiple_no_filename(client, sample_pdf_content):
     """Test multiple upload with missing filename"""
@@ -252,21 +257,23 @@ def test_upload_multiple_no_filename(client, sample_pdf_content):
     ]
     response = client.post("/upload-multiple-documents", files=files)
 
-    assert response.status_code in [400, 422, 500]  # FastAPI validation can return 422
+    # FastAPI returns 422 for validation errors
+    assert response.status_code == 422
 
-def test_upload_multiple_mixed_extensions(client, sample_pdf_content):
-    """Test multiple upload validates all files"""
+def test_upload_multiple_mixed_extensions(client, sample_pdf_content, mock_docling_converter):
+    """Test multiple upload handles case-insensitive extensions"""
     files = [
         ("files", ("test.PDF", io.BytesIO(sample_pdf_content), "application/pdf")),
         ("files", ("test.Pdf", io.BytesIO(sample_pdf_content), "application/pdf"))
     ]
     response = client.post("/upload-multiple-documents", files=files)
 
-    # Should handle case-insensitive extensions
-    assert response.status_code in [200, 400, 500]  # Can be validation or server error
+    # Should handle case-insensitive extensions (lowercase comparison in code)
+    assert response.status_code == 200
+    assert "2 documents" in response.json()["filename"]
 
 def test_upload_multiple_conversion_error(client, sample_pdf_content, mock_docling_converter):
-    """Test multiple upload handles conversion errors"""
+    """Test multiple upload handles conversion errors gracefully"""
     mock_docling_converter.convert.side_effect = Exception("Conversion failed")
 
     files = [
@@ -274,7 +281,9 @@ def test_upload_multiple_conversion_error(client, sample_pdf_content, mock_docli
     ]
     response = client.post("/upload-multiple-documents", files=files)
 
-    assert response.status_code == 500
+    # Should return 400 when all files fail (no successful results)
+    assert response.status_code == 400
+    assert "Failed to process some files" in response.json()["detail"]
 
 def test_upload_multiple_empty_list(client):
     """Test multiple upload with no files"""
@@ -282,6 +291,76 @@ def test_upload_multiple_empty_list(client):
 
     # FastAPI will require at least one file
     assert response.status_code in [400, 422]
+
+def test_upload_multiple_with_mixed_file_types(client, sample_pdf_content, sample_txt_content, mock_docling_converter):
+    """Test multiple upload with mixed file types (PDF + TXT)"""
+    files = [
+        ("files", ("doc1.pdf", io.BytesIO(sample_pdf_content), "application/pdf")),
+        ("files", ("notes.txt", io.BytesIO(sample_txt_content), "text/plain"))
+    ]
+    response = client.post("/upload-multiple-documents", files=files)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "2 documents" in data["filename"]
+    assert "doc1.pdf" in data["filename"]
+    assert "notes.txt" in data["filename"]
+
+def test_upload_multiple_partial_success(client, sample_pdf_content, sample_txt_content, mock_docling_converter, mocker):
+    """Test multiple upload with partial success (some files fail, some succeed)"""
+    # Make converter fail on PDF but TXT will succeed (no conversion needed)
+    mock_docling_converter.convert.side_effect = Exception("Conversion failed")
+
+    files = [
+        ("files", ("doc1.pdf", io.BytesIO(sample_pdf_content), "application/pdf")),
+        ("files", ("notes.txt", io.BytesIO(sample_txt_content), "text/plain"))
+    ]
+    response = client.post("/upload-multiple-documents", files=files)
+
+    # Should succeed with warnings for failed PDF
+    assert response.status_code == 200
+    data = response.json()
+    assert "partial_success" in data
+    assert "warnings" in data
+    assert len(data["warnings"]) > 0
+    # TXT file should succeed
+    assert "1 documents" in data["filename"] or "notes.txt" in data["filename"]
+
+# ===============================
+# Multiple Document Upload Stream Tests (3)
+# ===============================
+
+def test_upload_multiple_stream_success(client, sample_pdf_content, mock_docling_converter):
+    """Test streaming multiple document upload"""
+    files = [
+        ("files", ("test1.pdf", io.BytesIO(sample_pdf_content), "application/pdf")),
+        ("files", ("test2.pdf", io.BytesIO(sample_pdf_content), "application/pdf"))
+    ]
+    response = client.post("/upload-multiple-documents-stream", files=files)
+
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+
+def test_upload_multiple_stream_invalid_file(client, sample_txt_content):
+    """Test streaming upload with non-PDF file"""
+    files = [
+        ("files", ("test.txt", io.BytesIO(sample_txt_content), "text/plain"))
+    ]
+    response = client.post("/upload-multiple-documents-stream", files=files)
+
+    assert response.status_code == 200
+    # Response is streaming, error will be in stream content
+
+def test_upload_multiple_stream_progress(client, sample_pdf_content, mock_docling_converter):
+    """Test streaming upload provides progress updates"""
+    files = [
+        ("files", (f"test{i}.pdf", io.BytesIO(sample_pdf_content), "application/pdf"))
+        for i in range(3)
+    ]
+    response = client.post("/upload-multiple-documents-stream", files=files)
+
+    assert response.status_code == 200
+    # Stream should provide progress updates for each file
 
 # ===============================
 # Chat Endpoint Tests (6)
@@ -398,15 +477,18 @@ def test_fsd_token_usage(client):
     # Should return some usage stats
     assert isinstance(response.json(), dict)
 
-def test_fsd_generate_from_document_pdf(client, sample_pdf_content, mocker):
+@pytest.mark.asyncio
+async def test_fsd_generate_from_document_pdf(client, sample_pdf_content, mocker):
     """Test FSD generation from PDF"""
+    from unittest.mock import AsyncMock
+
     mock_result = mocker.MagicMock()
     mock_result.success = True
     mock_result.message = "Success"
     mock_result.document_id = "fsd-123"
     mock_result.token_usage = {"input": 100, "output": 200}
 
-    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload')
+    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload', new_callable=AsyncMock)
     mock_service.return_value = mock_result
 
     files = {"file": ("test.pdf", io.BytesIO(sample_pdf_content), "application/pdf")}
@@ -418,15 +500,18 @@ def test_fsd_generate_from_document_pdf(client, sample_pdf_content, mocker):
     assert response.json()["success"] is True
     assert "document_id" in response.json()
 
-def test_fsd_generate_from_document_docx(client, mocker):
+@pytest.mark.asyncio
+async def test_fsd_generate_from_document_docx(client, mocker):
     """Test FSD generation from DOCX"""
+    from unittest.mock import AsyncMock
+
     mock_result = mocker.MagicMock()
     mock_result.success = True
     mock_result.document_id = "fsd-456"
     mock_result.message = "Generated"
     mock_result.token_usage = {}
 
-    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload')
+    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload', new_callable=AsyncMock)
     mock_service.return_value = mock_result
 
     content = b"PK\x03\x04..."
@@ -451,7 +536,8 @@ def test_fsd_generate_no_filename(client, sample_pdf_content):
 
     response = client.post("/fsd/generate-from-document", files=files)
 
-    assert response.status_code in [400, 422, 500]  # FastAPI validation can return 422
+    # FastAPI returns 422 for validation errors with empty filename
+    assert response.status_code == 422
 
 def test_fsd_generate_empty_file(client):
     """Test FSD generation with empty file"""
@@ -462,15 +548,18 @@ def test_fsd_generate_empty_file(client):
     assert response.status_code == 400
     assert "empty" in response.json()["detail"].lower()
 
-def test_fsd_generate_with_context(client, sample_pdf_content, mocker):
+@pytest.mark.asyncio
+async def test_fsd_generate_with_context(client, sample_pdf_content, mocker):
     """Test FSD generation with additional context"""
+    from unittest.mock import AsyncMock
+
     mock_result = mocker.MagicMock()
     mock_result.success = True
     mock_result.document_id = "fsd-789"
     mock_result.message = "Success"
     mock_result.token_usage = {}
 
-    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload')
+    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload', new_callable=AsyncMock)
     mock_service.return_value = mock_result
 
     files = {"file": ("test.pdf", io.BytesIO(sample_pdf_content), "application/pdf")}
@@ -481,13 +570,16 @@ def test_fsd_generate_with_context(client, sample_pdf_content, mocker):
     assert response.status_code == 200
     mock_service.assert_called_once()
 
-def test_fsd_generate_error(client, sample_pdf_content, mocker):
+@pytest.mark.asyncio
+async def test_fsd_generate_error(client, sample_pdf_content, mocker):
     """Test FSD generation handles errors"""
+    from unittest.mock import AsyncMock
+
     mock_result = mocker.MagicMock()
     mock_result.success = False
     mock_result.message = "Generation failed"
 
-    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload')
+    mock_service = mocker.patch('main.fsd_service.generate_fsd_from_document_upload', new_callable=AsyncMock)
     mock_service.return_value = mock_result
 
     files = {"file": ("test.pdf", io.BytesIO(sample_pdf_content), "application/pdf")}
@@ -531,7 +623,8 @@ def test_presales_upload_invalid_type(client, sample_pdf_content):
 
     response = client.post("/presales/upload", files=files)
 
-    assert response.status_code in [400, 500]  # Can be validation or server error
+    # Should reject non-Excel files
+    assert response.status_code in [400, 500]
 
 def test_presales_upload_error(client, mocker):
     """Test presales upload handles errors"""
