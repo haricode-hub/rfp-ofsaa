@@ -136,6 +136,91 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
+@app.post("/upload-multiple-documents-stream")
+async def upload_multiple_documents_stream(files: list[UploadFile] = File(...)):
+    """Upload multiple documents with streaming progress updates"""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    import json
+
+    async def stream_progress():
+        try:
+            def process_pdf(file_content: bytes, filename: str) -> tuple[str, str]:
+                """Process a single PDF file"""
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                    temp_file.write(file_content)
+                    temp_path = temp_file.name
+
+                try:
+                    result = converter.convert(temp_path)
+                    markdown_content = result.document.export_to_markdown()
+                    return (filename, markdown_content)
+                finally:
+                    os.unlink(temp_path)
+
+            # Validate all files first
+            for file in files:
+                if not file.filename or not file.filename.lower().endswith('.pdf'):
+                    yield f"data: {json.dumps({'error': f'Only PDF files are supported. Invalid: {file.filename}'})}\n\n"
+                    return
+
+            total_files = len(files)
+            yield f"data: {json.dumps({'progress': 0, 'total': total_files, 'message': 'Starting upload...'})}\n\n"
+
+            # Read all files
+            file_data = []
+            for file in files:
+                content = await file.read()
+                file_data.append((content, file.filename))
+
+            yield f"data: {json.dumps({'progress': 0, 'total': total_files, 'message': 'Processing PDFs...'})}\n\n"
+
+            # Process PDFs and track progress
+            completed_count = 0
+            results = []
+
+            with ThreadPoolExecutor(max_workers=min(len(files), 6)) as executor:
+                loop = asyncio.get_event_loop()
+                futures = [
+                    loop.run_in_executor(executor, process_pdf, content, filename)
+                    for content, filename in file_data
+                ]
+
+                for future in asyncio.as_completed(futures):
+                    result = await future
+                    results.append(result)
+                    completed_count += 1
+
+                    yield f"data: {json.dumps({'progress': completed_count, 'total': total_files, 'message': f'Processed {completed_count}/{total_files} PDFs', 'filename': result[0]})}\n\n"
+
+            # Combine results
+            combined_content = ""
+            filenames = []
+            for filename, markdown_content in results:
+                combined_content += f"\n\n## Document: {filename}\n\n{markdown_content}"
+                filenames.append(filename)
+
+            final_result = {
+                "filename": f"{len(filenames)} documents: {', '.join(filenames)}",
+                "content": combined_content,
+                "status": "success",
+                "done": True
+            }
+
+            yield f"data: {json.dumps(final_result)}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'error': f'Error processing files: {str(e)}'})}\n\n"
+
+    return StreamingResponse(
+        stream_progress(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
 @app.post("/upload-multiple-documents")
 async def upload_multiple_documents(files: list[UploadFile] = File(...)):
     """Upload multiple documents and combine their content"""
@@ -167,8 +252,8 @@ async def upload_multiple_documents(files: list[UploadFile] = File(...)):
             content = await file.read()
             file_data.append((content, file.filename))
 
-        # Process all PDFs in parallel
-        with ThreadPoolExecutor(max_workers=min(len(files), 4)) as executor:
+        # Process all PDFs in parallel - using all 6 CPU cores
+        with ThreadPoolExecutor(max_workers=min(len(files), 6)) as executor:
             loop = asyncio.get_event_loop()
             results = await asyncio.gather(*[
                 loop.run_in_executor(executor, process_pdf, content, filename)
