@@ -102,9 +102,15 @@ src/
 - Backend runs on `0.0.0.0:8505`, frontend on `192.168.2.95:3505`
 
 ### Document Conversion
-- **Docling Integration**: Main conversion engine in `main.py:27-72`
-- **File Validation**: MIME type checking against allowed formats
+- **Docling Integration**: Main conversion engine with extreme speed optimization
+- **File Validation**: Extension-based checking against allowed formats (.pdf, .doc, .docx, .txt, .md, .xls, .xlsx, .ppt, .pptx)
+- **Fast Path**: Text files (.txt, .md) processed directly without conversion
 - **Temp File Handling**: Automatic cleanup after conversion
+- **Multiple Document Upload**:
+  - `/upload-multiple-documents`: Batch upload with extreme parallelization (up to 32 workers for PDFs)
+  - `/upload-multiple-documents-stream`: Real-time progress updates with streaming
+  - Partial success handling with warnings for failed files
+  - Mixed file type support (PDFs, Office documents, text files)
 
 ### AI Streaming Response
 - **Server-Sent Events**: `/chat` endpoint streams JSON chunks
@@ -129,10 +135,12 @@ src/
 - **Service Location**: `services/fsd.py` - Comprehensive FSD document generator
 - **Document Generation**: OpenAI GPT-4o-mini for professional specification documents
 - **Token Tracking**: Advanced cost monitoring with detailed usage analytics
-- **Vector Search**: Optional Qdrant integration for Oracle Flexcube documentation
+- **Vector Search**: Optional Qdrant integration for Oracle Flexcube documentation (with warning suppression for local dev)
 - **MCP Integration**: Optional Context7 MCP server for enhanced documentation retrieval
+- **PDF Parsing**: Uses `pdfplumber` (primary) with `pypdf` fallback for text extraction
 - **Word Output**: Professional .docx generation with TOC, bookmarks, hyperlinks, and styling
 - **Template Structure**: Complete FSD template with 11 sections including traceability tables
+- **Async Operations**: All generation endpoints use async/await for better performance
 
 ### Presales Agent Architecture
 - **Service Location**: `services/presales.py` - Comprehensive Oracle banking RFP analysis
@@ -147,6 +155,32 @@ src/
 
 ## Testing and Quality
 
+### Backend Testing
+- **Test Framework**: pytest with asyncio support
+- **Total Tests**: 173 tests across 6 test files
+- **Coverage Target**: 90%+ overall coverage
+- **Test Files**:
+  - `tests/test_main.py`: 64 tests (API endpoints)
+  - `tests/test_middlewares.py`: 8 tests (CORS, error handling)
+  - `tests/services/test_ai_service.py`: 32 tests (AI service)
+  - `tests/services/test_fsd.py`: 38 tests (FSD generation)
+  - `tests/services/test_presales.py`: 31 tests (Presales analysis)
+- **Running Tests**: `uv run pytest tests/ -v --cov`
+- **Test Coverage**: All endpoints, services, edge cases, and error scenarios
+
+### Frontend Testing
+- **Test Framework**: Jest + React Testing Library
+- **Total Tests**: 209 tests across 5 phases
+- **Test Files**:
+  - `__tests__/hooks/`: 11 tests (Custom React hooks)
+  - `__tests__/components/`: 71 tests (UI components)
+  - `__tests__/pages/`: 24 tests (Next.js pages)
+  - `__tests__/integration/`: 45 tests (User workflows)
+- **Running Tests**: `cd frontend && npm test` (⚠️ Use npm, NOT bun - Jest needs jsdom)
+- **Watch Mode**: `npm run test:watch`
+- **Coverage**: `npm run test:coverage`
+- **Test Documentation**: See `frontend/TESTING.md` for comprehensive guide
+
 ### Linting Configuration
 - **Backend**: Ruff for Python code quality
 - **Frontend**: ESLint with Next.js configuration
@@ -155,12 +189,13 @@ src/
 ### API Testing
 - **Health Check**: `GET /health` for service status
 - **Upload Test**: Use supported file formats via `/upload-document`
+- **Multiple Upload**: Test batch processing via `/upload-multiple-documents` or streaming via `/upload-multiple-documents-stream`
 - **Chat Test**: Stream endpoint at `/chat` with query/context
-- **FSD Generation**: Test document creation via `/fsd/generate`
+- **FSD Generation**: Test document creation via `/fsd/generate-from-document`
 - **FSD Download**: Test document retrieval via `/fsd/download/{document_id}`
 - **Presales Upload**: Upload Excel files via `/presales/upload`
 - **Presales Processing**: Process RFP analysis via `/presales/process`
-- **API Documentation**: Available at `http://localhost:8000/docs`
+- **API Documentation**: Available at `http://localhost:8505/docs`
 
 ### FSD Agent API Endpoints
 - **POST /fsd/generate**: Generate Functional Specification Document from requirements
@@ -179,8 +214,12 @@ src/
 
 ### File Upload Constraints
 - **Size**: No explicit limit set (handled by FastAPI defaults)
-- **Types**: Strictly validated against MIME type whitelist
-- **Processing**: Synchronous conversion (may need async for large files)
+- **Types**: Strictly validated against extension whitelist (.pdf, .doc, .docx, .txt, .md, .xls, .xlsx, .ppt, .pptx)
+- **Processing**: Parallel processing for multiple documents with extreme optimization
+- **Performance**:
+  - Text files: Instant (no conversion)
+  - PDFs: Up to 32 parallel workers for batch processing
+  - Mixed uploads: Separate worker pools for PDFs vs other files
 
 ### Real-time Features
 - **Streaming Chat**: Server-sent events with JSON chunking
@@ -197,6 +236,15 @@ src/
 - **Package Manager**: Bun for faster installs and builds
 - **Python Deps**: UV for efficient dependency management
 - **Monaco Editor**: Code editing component for canvas
+- **PDF Processing**: Docling with OCR and table structure disabled for 10x speed improvement
+- **Concurrent Uploads**: ThreadPoolExecutor with dynamic worker allocation based on CPU cores
+
+### Recent Updates
+- **PyPDF2 → pypdf Migration**: Replaced deprecated PyPDF2 with modern pypdf library (v6.1.1)
+- **Warning Suppression**: Added Qdrant insecure connection warning suppression for local development
+- **Test Suite**: Comprehensive 173 tests with zero warnings
+- **Async Operations**: FSD generation endpoints now fully async
+- **Extension-Based Validation**: Changed from MIME type to extension-based file validation for better reliability
 
 When working on this codebase, always test both document upload and AI chat functionality together, as they form the core user workflow.
 # important-instruction-reminders
