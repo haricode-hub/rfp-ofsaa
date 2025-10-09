@@ -6,6 +6,7 @@ A comprehensive Next.js frontend with FastAPI backend for document analysis and 
 
 ### Knowledge Agent
 - **Document Upload**: Upload PDF, DOC, DOCX, TXT, MD, XLS, XLSX, PPT, PPTX files
+- **Multiple Document Upload**: Batch upload with extreme parallelization (up to 32 workers) and streaming progress
 - **Document Display**: View uploaded documents in markdown format
 - **Text Selection**: Select text from documents for context-based queries
 - **AI Chat**: Ask questions about selected text or general document content
@@ -14,8 +15,9 @@ A comprehensive Next.js frontend with FastAPI backend for document analysis and 
 
 ### FSD Agent
 - **Functional Specification Document Generation**: Create professional FSD documents from requirements
-- **OpenAI GPT-4o Integration**: Advanced AI-powered document generation
+- **OpenAI GPT-4o Integration**: Advanced AI-powered document generation with async operations
 - **Vector Search**: Optional Qdrant integration for Oracle Flexcube documentation
+- **PDF Parsing**: Uses pdfplumber (primary) with pypdf fallback for reliable text extraction
 - **Word Document Output**: Professional .docx generation with TOC, bookmarks, and styling
 - **Token Usage Tracking**: Detailed cost monitoring and analytics
 
@@ -116,6 +118,20 @@ A comprehensive Next.js frontend with FastAPI backend for document analysis and 
 
 ## Development
 
+### Testing
+
+**Backend** (173 comprehensive tests):
+```bash
+# Run all tests
+uv run pytest tests/ -v
+
+# Run with coverage report
+uv run pytest tests/ -v --cov
+
+# Run specific test file
+uv run pytest tests/test_main.py -v
+```
+
 ### Linting
 
 **Frontend**:
@@ -128,12 +144,15 @@ bun run build
 **Backend**:
 ```bash
 uv run ruff check main.py
+uv run ruff check services/
 ```
 
 ## API Endpoints
 
 ### Core Endpoints
-- `POST /upload-document`: Upload and convert documents to markdown
+- `POST /upload-document`: Upload and convert single document to markdown
+- `POST /upload-multiple-documents`: Batch upload multiple documents with extreme parallelization
+- `POST /upload-multiple-documents-stream`: Stream multiple document uploads with real-time progress
 - `POST /chat`: Stream AI responses based on query and context
 - `GET /health`: Health check endpoint
 
@@ -155,9 +174,12 @@ uv run ruff check main.py
 - **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
 - **Backend**: FastAPI, Python 3.13
 - **AI Models**: OpenAI GPT-4o-mini via OpenRouter
-- **Document Processing**: Docling library
+- **Document Processing**: Docling library with extreme speed optimization
+- **PDF Processing**: pdfplumber (primary), pypdf v6.1.1 (fallback)
 - **Vector Database**: Qdrant (optional for FSD agent)
 - **Web Search**: Smithery.ai Exa search (for Presales agent)
 - **Package Management**: Bun (frontend), UV (backend)
 - **Word Processing**: python-docx for .docx generation
 - **Excel Processing**: pandas, openpyxl for spreadsheet handling
+- **Testing**: pytest with asyncio support (173 comprehensive tests)
+- **Performance**: ThreadPoolExecutor with dynamic worker allocation (up to 32 workers for PDFs)
