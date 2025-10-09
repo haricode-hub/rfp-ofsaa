@@ -109,20 +109,20 @@ def test_parse_pdf_pdfplumber_success(mock_env_vars, mocker):
     assert "Extracted text" in text
 
 def test_parse_pdf_pypdf2_fallback(mock_env_vars, mocker):
-    """Test PDF parsing fallback to PyPDF2"""
+    """Test PDF parsing fallback to pypdf"""
     from services.fsd import DocumentAnalyzer, TokenUsageTracker
     from openai import OpenAI, AsyncOpenAI
 
     # Mock pdfplumber to fail
     mocker.patch('services.fsd.pdfplumber.open', side_effect=Exception("Fail"))
 
-    # Mock PyPDF2
+    # Mock pypdf PdfReader
     mock_reader = mocker.MagicMock()
     mock_page = mocker.MagicMock()
-    mock_page.extract_text.return_value = "PyPDF2 extracted text"
+    mock_page.extract_text.return_value = "pypdf extracted text"
     mock_reader.pages = [mock_page]
 
-    mocker.patch('services.fsd.PyPDF2.PdfReader', return_value=mock_reader)
+    mocker.patch('services.fsd.PdfReader', return_value=mock_reader)
 
     tracker = TokenUsageTracker()
     client = OpenAI(api_key="test")
@@ -131,7 +131,7 @@ def test_parse_pdf_pypdf2_fallback(mock_env_vars, mocker):
 
     text = analyzer.parse_pdf(b"fake pdf")
 
-    assert "PyPDF2" in text
+    assert "pypdf" in text
 
 def test_parse_pdf_error(mock_env_vars, mocker):
     """Test PDF parsing handles errors"""
@@ -139,7 +139,7 @@ def test_parse_pdf_error(mock_env_vars, mocker):
     from openai import OpenAI, AsyncOpenAI
 
     mocker.patch('services.fsd.pdfplumber.open', side_effect=Exception("Fail"))
-    mocker.patch('services.fsd.PyPDF2.PdfReader', side_effect=Exception("Fail"))
+    mocker.patch('services.fsd.PdfReader', side_effect=Exception("Fail"))
 
     tracker = TokenUsageTracker()
     client = OpenAI(api_key="test")

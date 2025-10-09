@@ -18,7 +18,7 @@ from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from dotenv import load_dotenv
-import PyPDF2
+from pypdf import PdfReader
 import pdfplumber
 from io import BytesIO
 
@@ -109,11 +109,11 @@ class DocumentAnalyzer:
                     return text_content
 
         except Exception as e:
-            logger.warning(f"pdfplumber failed: {e}, trying PyPDF2")
+            logger.warning(f"pdfplumber failed: {e}, trying pypdf")
 
-        # Fallback to PyPDF2
+        # Fallback to pypdf
         try:
-            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+            pdf_reader = PdfReader(BytesIO(file_bytes))
             text_content = ""
             for page in pdf_reader.pages:
                 text_content += page.extract_text() + "\n"
@@ -278,6 +278,10 @@ class FSDAgentService:
         # Initialize Qdrant client (optional - will work without it)
         try:
             if os.getenv("QDRANT_URL") and os.getenv("QDRANT_API_KEY"):
+                import warnings
+                # Suppress insecure connection warning for local development
+                warnings.filterwarnings('ignore', message='Api key is used with an insecure connection')
+
                 self.qdrant_client = QdrantClient(
                     url=os.getenv("QDRANT_URL"),
                     api_key=os.getenv("QDRANT_API_KEY")
