@@ -132,6 +132,27 @@ uv run pytest tests/ -v --cov
 uv run pytest tests/test_main.py -v
 ```
 
+**Frontend** (209 comprehensive tests):
+```bash
+cd frontend
+
+# Run all tests
+npm test
+
+# Run tests in watch mode (auto-rerun on changes)
+npm run test:watch
+
+# Run with coverage report
+npm run test:coverage
+
+# Run specific test file
+npm test ComponentName
+npm test useHistory
+npm test DocumentDisplay
+```
+
+**⚠️ Important:** Always use `npm test` for frontend (NOT `bun test`) - Jest needs jsdom environment
+
 ### Linting
 
 **Frontend**:
@@ -181,5 +202,7 @@ uv run ruff check services/
 - **Package Management**: Bun (frontend), UV (backend)
 - **Word Processing**: python-docx for .docx generation
 - **Excel Processing**: pandas, openpyxl for spreadsheet handling
-- **Testing**: pytest with asyncio support (173 comprehensive tests)
+- **Testing**:
+  - **Backend**: pytest with asyncio support (173 comprehensive tests)
+  - **Frontend**: Jest + React Testing Library (209 comprehensive tests)
 - **Performance**: ThreadPoolExecutor with dynamic worker allocation (up to 32 workers for PDFs)
