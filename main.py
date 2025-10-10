@@ -3,8 +3,10 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from pathlib import Path
 from docling.document_converter import DocumentConverter
 import tempfile
 import os
@@ -28,16 +30,37 @@ logging.getLogger('docling.utils').setLevel(logging.WARNING)
 
 app = FastAPI(title="Document Converter API", version="1.0.0")
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# Allow frontend domains (production and local)
+origins = [
+    "https://betasenai.jmrinfotech.com",
+    "http://betasenai.jmrinfotech.com",
+    "http://192.168.2.93:3505",
+    "http://192.168.2.95:3505",
+    "http://localhost:3505",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3505",
-        "http://192.168.2.95:3505",
-    ],  # Next.js dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=origins,        # frontend domain
+    allow_credentials=True,       # allow cookies/auth
+    allow_methods=["*"],          # GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"]           # allow all headers
 )
+
+# Serve static files from Next.js build output
+FRONTEND_DIR = Path(__file__).parent / "frontend" / "out"
+if FRONTEND_DIR.exists():
+    # Mount static assets (_next directory)
+    app.mount("/_next", StaticFiles(directory=str(FRONTEND_DIR / "_next")), name="next_static")
+    logger.info(f"Mounted static assets from {FRONTEND_DIR / '_next'}")
+else:
+    logger.warning(f"Frontend build directory not found: {FRONTEND_DIR}")
+    logger.warning("Run 'cd frontend && bun run build' to generate static files")
 
 # Initialize DocumentConverter with EXTREME speed-optimized settings
 try:
@@ -567,6 +590,49 @@ async def clear_presales_cache():
     """Clear presales service cache"""
     return presales_service.clear_cache()
 
+# ===============================
+# Frontend Static File Routes
+# ===============================
+
+@app.get("/")
+async def serve_index():
+    """Serve the main index page"""
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    raise HTTPException(status_code=404, detail="Frontend not built. Run: cd frontend && bun run build")
+
+@app.get("/chat")
+async def serve_chat():
+    """Serve the chat page"""
+    chat_path = FRONTEND_DIR / "chat.html"
+    if chat_path.exists():
+        return FileResponse(str(chat_path))
+    raise HTTPException(status_code=404, detail="Chat page not found")
+
+@app.get("/presales")
+async def serve_presales():
+    """Serve the presales page"""
+    presales_path = FRONTEND_DIR / "presales.html"
+    if presales_path.exists():
+        return FileResponse(str(presales_path))
+    raise HTTPException(status_code=404, detail="Presales page not found")
+
+@app.get("/fsd")
+async def serve_fsd():
+    """Serve the FSD page"""
+    fsd_path = FRONTEND_DIR / "fsd.html"
+    if fsd_path.exists():
+        return FileResponse(str(fsd_path))
+    raise HTTPException(status_code=404, detail="FSD page not found")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8505, reload=True)
+    # Production: Run on 0.0.0.0:3505 (accessible on 192.168.2.93:3505)
+    # Development: Run on 0.0.0.0:8505
+    import os
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "3505"))
+    reload = os.getenv("RELOAD", "false").lower() == "true"
+
+    uvicorn.run("main:app", host=host, port=port, reload=reload)
