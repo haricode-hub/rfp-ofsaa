@@ -10,8 +10,6 @@ import {
   PlusIcon,
   ClockIcon,
   ArrowRightCircleIcon,
-  SunIcon,
-  MoonIcon,
   ArrowUpTrayIcon,
   QuestionMarkCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -573,25 +571,6 @@ function ChatInterface() {
 
         {/* Top left controls */}
         <div className="fixed top-20 left-4 z-10 flex items-center gap-2">
-          {/* Theme toggle button */}
-          <button
-            onClick={toggleTheme}
-            className="btn btn-secondary"
-            style={{
-              padding: '0.45rem',
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--blue-primary)',
-              borderColor: 'var(--border-color)'
-            }}
-            aria-label="Toggle theme"
-          >
-            {isDarkMode ? (
-              <SunIcon className="h-5 w-5" />
-            ) : (
-              <MoonIcon className="h-5 w-5" />
-            )}
-          </button>
-          
           {/* Upload button */}
           <button
             onClick={handleFileSelect}
