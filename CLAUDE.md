@@ -8,7 +8,8 @@ RFP OFSAA is a document analysis application with AI-powered chat functionality 
 
 **Core Architecture:**
 - **Backend**: FastAPI server with document conversion (via Docling) and OpenAI/OpenRouter integration
-- **Frontend**: Next.js with custom components for document display, text selection, and real-time markdown editing
+- **Frontend**: Next.js 15 with static export, served directly by FastAPI backend
+- **Deployment**: Single backend service serves both API endpoints and frontend static files
 - **Document Flow**: Upload → Convert to Markdown → Display → Text Selection → AI Chat → Canvas Integration
 - **FSD Agent**: Functional Specification Document generator with OpenAI GPT and optional vector search
 - **Presales Agent**: Excel-based RFP analysis for Oracle banking solutions (FLEXCUBE, OFSAA, OBP)
@@ -28,15 +29,17 @@ bun install               # Install Node dependencies
 
 ### Running the Application
 ```bash
-# Start both services (recommended)
-./start.sh                # Linux/macOS
-./start.ps1              # Windows PowerShell
-./start.bat              # Windows Command Prompt
+# Production mode (single service - backend serves frontend)
+uv run python main.py                    # Runs on port 3505 (configured in .env)
 
-# Or start individually
-uv run python main.py                    # Backend only (port 8000)
-cd frontend && bun run dev               # Frontend only (port 3000)
+# Development mode (frontend only - for active development)
+cd frontend && bun run dev               # Frontend dev server on port 3505
+
+# Build frontend for production
+cd frontend && bun run build             # Generates static files in frontend/out/
 ```
+
+**Note**: The application now uses a **backend-only architecture**. The FastAPI backend serves both the API endpoints and the frontend static files. No need to run separate frontend/backend processes in production.
 
 ### Development Tools
 ```bash
@@ -99,7 +102,10 @@ src/
 - **QDRANT_API_KEY**: Optional for Qdrant vector search capabilities
 - **SMITHERY_API_KEY**: Required for presales agent web search capabilities
 - **SMITHERY_PROFILE**: Required for Smithery.ai Exa search configuration
-- Backend runs on `0.0.0.0:8505`, frontend on `192.168.2.95:3505`
+- **HOST**: Server host (default: `0.0.0.0`)
+- **PORT**: Server port (default: `3505`)
+- **LOG_LEVEL**: Logging level (default: `INFO`, use `WARNING` to reduce logs)
+- Backend runs on configured port (default `3505`), serves both API and frontend
 
 ### Document Conversion
 - **Docling Integration**: Main conversion engine with extreme speed optimization
@@ -240,6 +246,10 @@ src/
 - **Concurrent Uploads**: ThreadPoolExecutor with dynamic worker allocation based on CPU cores
 
 ### Recent Updates
+- **Backend-Only Architecture**: Implemented single-service deployment where FastAPI serves both API and frontend static files
+- **Static Export**: Next.js configured with `output: 'export'` for static file generation
+- **Centralized API Config**: Created `frontend/src/lib/api.ts` for relative API paths
+- **Static File Serving**: FastAPI mounts `/_next` assets and serves HTML pages, .txt metadata, and favicon
 - **PyPDF2 → pypdf Migration**: Replaced deprecated PyPDF2 with modern pypdf library (v6.1.1)
 - **Warning Suppression**: Added Qdrant insecure connection warning suppression for local development
 - **Test Suite**: Comprehensive 173 tests with zero warnings

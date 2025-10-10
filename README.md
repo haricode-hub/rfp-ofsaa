@@ -1,6 +1,6 @@
 # RFP OFSAA - AI-Powered Document Processing Platform
 
-A comprehensive Next.js frontend with FastAPI backend for document analysis and specialized AI agent services.
+A comprehensive document analysis platform with FastAPI backend serving both API endpoints and Next.js static frontend. Single-service deployment for simplified production use.
 
 ## Features
 
@@ -30,7 +30,7 @@ A comprehensive Next.js frontend with FastAPI backend for document analysis and 
 
 ## Setup
 
-### Backend Setup
+### Quick Start (Production)
 
 1. **Install Python dependencies**:
    ```bash
@@ -54,27 +54,40 @@ A comprehensive Next.js frontend with FastAPI backend for document analysis and 
    # Required for Presales Agent web search
    SMITHERY_API_KEY=your_smithery_api_key
    SMITHERY_PROFILE=your_smithery_profile
+
+   # Server configuration
+   HOST=0.0.0.0
+   PORT=3505
+   LOG_LEVEL=WARNING  # Use INFO for detailed logs
    ```
 
-3. **Run the backend**:
-   ```bash
-   uv run python main.py
-   # or
-   ./start.sh
-   ```
-
-### Frontend Setup
-
-1. **Install frontend dependencies**:
+3. **Build Frontend** (first time only):
    ```bash
    cd frontend
    bun install
+   bun run build
+   cd ..
    ```
 
-2. **Run the frontend**:
+4. **Run the application**:
    ```bash
-   bun run dev
+   uv run python main.py
    ```
+
+The application will be available at `http://localhost:3505` (or your configured domain)
+
+### Development Mode
+
+For active frontend development:
+
+```bash
+# Terminal 1: Backend
+uv run python main.py
+
+# Terminal 2: Frontend (hot reload)
+cd frontend
+bun run dev
+```
 
 ## Usage Guide
 
@@ -190,10 +203,23 @@ uv run ruff check services/
 - `GET /presales/cache-stats`: Get presales service cache statistics
 - `POST /presales/clear-cache`: Clear presales service cache
 
+## Architecture
+
+**Backend-Only Deployment**: The application uses a single-service architecture where FastAPI serves both:
+- API endpoints for document processing, chat, FSD, and presales services
+- Frontend static files (Next.js static export from `frontend/out/`)
+
+**Benefits**:
+- Simplified deployment (one service instead of two)
+- No CORS issues (same origin)
+- Easier configuration and management
+- Single port/domain for entire application
+
 ## Technologies
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 15 (static export), React 19, TypeScript, Tailwind CSS
 - **Backend**: FastAPI, Python 3.13
+- **Deployment**: Single backend service serves both API and frontend
 - **AI Models**: OpenAI GPT-4o-mini via OpenRouter
 - **Document Processing**: Docling library with extreme speed optimization
 - **PDF Processing**: pdfplumber (primary), pypdf v6.1.1 (fallback)

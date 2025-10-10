@@ -55,7 +55,7 @@ app.add_middleware(
 # Serve static files from Next.js build output
 FRONTEND_DIR = Path(__file__).parent / "frontend" / "out"
 if FRONTEND_DIR.exists():
-    # Mount static assets (_next directory)
+    # Mount static assets (_next directory for JS/CSS bundles)
     app.mount("/_next", StaticFiles(directory=str(FRONTEND_DIR / "_next")), name="next_static")
     logger.info(f"Mounted static assets from {FRONTEND_DIR / '_next'}")
 else:
@@ -625,6 +625,24 @@ async def serve_fsd():
     if fsd_path.exists():
         return FileResponse(str(fsd_path))
     raise HTTPException(status_code=404, detail="FSD page not found")
+
+# Serve .txt files (Next.js static export metadata)
+@app.get("/{filename}.txt")
+async def serve_txt_files(filename: str):
+    """Serve Next.js .txt metadata files"""
+    txt_path = FRONTEND_DIR / f"{filename}.txt"
+    if txt_path.exists():
+        return FileResponse(str(txt_path), media_type="text/plain")
+    raise HTTPException(status_code=404, detail="File not found")
+
+# Serve favicon and other static assets
+@app.get("/favicon.ico")
+async def serve_favicon():
+    """Serve favicon"""
+    favicon_path = FRONTEND_DIR / "favicon.ico"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path), media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 if __name__ == "__main__":
     import uvicorn
