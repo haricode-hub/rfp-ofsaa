@@ -61,7 +61,7 @@ function HomeContent() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Chat with Doc */}
             <div className="card p-8">
               <h3 className="service-title mb-4">
@@ -138,6 +138,32 @@ function HomeContent() {
                 }}
               >
                 Try FSD Agent
+                <ArrowRightIcon className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* LLM Farm */}
+            <div className="card p-8">
+              <h3 className="service-title mb-4">
+                LLM Farm
+              </h3>
+              <p className="body-text mb-6">
+                Access multiple AI models in one place. Chat with GPT-4, Claude, Gemini, and more through a unified interface.
+              </p>
+              <Link
+                href="/llm-farm"
+                className="inline-flex items-center font-semibold transition-colors"
+                style={{
+                  color: 'var(--blue-primary)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--blue-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--blue-primary)';
+                }}
+              >
+                Try LLM Farm
                 <ArrowRightIcon className="ml-2 h-4 w-4" />
               </Link>
             </div>

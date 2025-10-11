@@ -16,6 +16,7 @@ import logging
 from services.ai_service import ai_service
 from services.fsd import fsd_service
 from services.presales import presales_service, ProcessRequest
+from services.llm_farm import LLMFarmService, ChatRequest as LLMChatRequest, ChatResponse as LLMChatResponse
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -510,6 +511,66 @@ async def health_check():
     return {"status": "healthy"}
 
 # ===============================
+# LLM Farm Service - Multi-Model Chat
+# ===============================
+
+# Initialize LLM Farm service
+import os
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+if not OPENROUTER_API_KEY:
+    logger.warning("OPENROUTER_API_KEY not found in environment variables. LLM Farm functionality will not work.")
+
+llm_farm_service = LLMFarmService(api_key=OPENROUTER_API_KEY)
+
+async def generate_llm_farm_sse_stream(message: str, model: str):
+    """Generate Server-Sent Events stream from OpenRouter responses"""
+    import json
+    try:
+        async for chunk in llm_farm_service.stream_openrouter(message, model):
+            data = json.dumps(chunk)
+            yield f"data: {data}\n\n"
+
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        error_data = json.dumps({"error": str(e)})
+        yield f"data: {error_data}\n\n"
+
+@app.post("/api/llm-farm/chat", response_model=LLMChatResponse)
+async def llm_farm_chat(request: LLMChatRequest) -> LLMChatResponse:
+    """Process LLM Farm chat message and return AI response in markdown format"""
+    try:
+        result = await llm_farm_service.call_openrouter(request.message, request.model)
+        return LLMChatResponse(message=result["message"], model=result["model"])
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"OpenRouter API error: {e.response.text}",
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Network error: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}",
+        )
+
+@app.post("/api/llm-farm/chat/stream")
+async def llm_farm_chat_stream(request: LLMChatRequest) -> StreamingResponse:
+    """Stream LLM Farm AI responses in real-time using Server-Sent Events"""
+    return StreamingResponse(
+        generate_llm_farm_sse_stream(request.message, request.model),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+# ===============================
 # FSD Agent Endpoints
 # ===============================
 
@@ -728,6 +789,20 @@ async def serve_fsd(session_token: str = Cookie(None)):
     if fsd_path.exists():
         return FileResponse(str(fsd_path))
     raise HTTPException(status_code=404, detail="FSD page not found")
+
+@app.get("/llm-farm")
+async def serve_llm_farm(session_token: str = Cookie(None)):
+    """Serve the LLM Farm page (protected)"""
+    if not check_auth(session_token):
+        login_path = FRONTEND_DIR / "login.html"
+        if login_path.exists():
+            return FileResponse(str(login_path))
+        raise HTTPException(status_code=404, detail="Login page not found")
+
+    llm_farm_path = FRONTEND_DIR / "llm-farm.html"
+    if llm_farm_path.exists():
+        return FileResponse(str(llm_farm_path))
+    raise HTTPException(status_code=404, detail="LLM Farm page not found")
 
 # Serve .txt files (Next.js static export metadata)
 @app.get("/{filename}.txt")

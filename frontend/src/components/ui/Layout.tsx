@@ -213,7 +213,7 @@ const Footer: React.FC = () => {
             <ul className="space-y-2 small-text">
               <li>
                 <Link
-                  href="/chat-with-doc"
+                  href="/chat"
                   className="nav-link"
                 >
                   Knowledge Agent
@@ -233,6 +233,14 @@ const Footer: React.FC = () => {
                   className="nav-link"
                 >
                   FSD Agent
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/llm-farm"
+                  className="nav-link"
+                >
+                  LLM Farm
                 </Link>
               </li>
             </ul>
