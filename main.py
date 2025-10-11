@@ -1,11 +1,12 @@
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import secrets
 from pathlib import Path
 from docling.document_converter import DocumentConverter
 import tempfile
@@ -91,6 +92,70 @@ class ChatRequest(BaseModel):
     context: str = ""
     canvas_content: str = ""
     enable_web_search: bool = False
+
+# ===============================
+# Authentication
+# ===============================
+
+# Hardcoded user credentials
+USERS = {
+    "admin": {
+        "email": "admin@jmrinfotech.com",
+        "password": "Admin@123"
+    }
+}
+
+# In-memory session storage
+SESSIONS = {}
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest, response: Response):
+    """Login endpoint with hardcoded credentials"""
+    user = None
+    for username, creds in USERS.items():
+        if creds["email"] == request.email and creds["password"] == request.password:
+            user = username
+            break
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Generate session token
+    session_token = secrets.token_urlsafe(32)
+    SESSIONS[session_token] = {"username": user, "email": request.email}
+
+    # Set session cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        max_age=86400,  # 24 hours
+        samesite="lax"
+    )
+
+    return {"success": True, "user": {"email": request.email, "username": user}}
+
+@app.post("/api/auth/logout")
+async def logout(response: Response, session_token: str = Cookie(None)):
+    """Logout endpoint"""
+    if session_token and session_token in SESSIONS:
+        del SESSIONS[session_token]
+
+    response.delete_cookie(key="session_token")
+    return {"success": True, "message": "Logged out successfully"}
+
+@app.get("/api/auth/session")
+async def get_session(session_token: str = Cookie(None)):
+    """Get current session"""
+    if not session_token or session_token not in SESSIONS:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session_data = SESSIONS[session_token]
+    return {"authenticated": True, "user": session_data}
 
 @app.post("/upload-document")
 async def upload_document(file: UploadFile = File(...)):
@@ -594,33 +659,71 @@ async def clear_presales_cache():
 # Frontend Static File Routes
 # ===============================
 
+@app.get("/login")
+async def serve_login():
+    """Serve the login page"""
+    login_path = FRONTEND_DIR / "login.html"
+    if login_path.exists():
+        return FileResponse(str(login_path))
+    raise HTTPException(status_code=404, detail="Login page not found")
+
+def check_auth(session_token: str = Cookie(None)):
+    """Check if user is authenticated"""
+    if not session_token or session_token not in SESSIONS:
+        return False
+    return True
+
 @app.get("/")
-async def serve_index():
-    """Serve the main index page"""
+async def serve_index(session_token: str = Cookie(None)):
+    """Serve the main index page (protected)"""
+    if not check_auth(session_token):
+        login_path = FRONTEND_DIR / "login.html"
+        if login_path.exists():
+            return FileResponse(str(login_path))
+        raise HTTPException(status_code=404, detail="Login page not found")
+
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
         return FileResponse(str(index_path))
     raise HTTPException(status_code=404, detail="Frontend not built. Run: cd frontend && bun run build")
 
 @app.get("/chat")
-async def serve_chat():
-    """Serve the chat page"""
+async def serve_chat(session_token: str = Cookie(None)):
+    """Serve the chat page (protected)"""
+    if not check_auth(session_token):
+        login_path = FRONTEND_DIR / "login.html"
+        if login_path.exists():
+            return FileResponse(str(login_path))
+        raise HTTPException(status_code=404, detail="Login page not found")
+
     chat_path = FRONTEND_DIR / "chat.html"
     if chat_path.exists():
         return FileResponse(str(chat_path))
     raise HTTPException(status_code=404, detail="Chat page not found")
 
 @app.get("/presales")
-async def serve_presales():
-    """Serve the presales page"""
+async def serve_presales(session_token: str = Cookie(None)):
+    """Serve the presales page (protected)"""
+    if not check_auth(session_token):
+        login_path = FRONTEND_DIR / "login.html"
+        if login_path.exists():
+            return FileResponse(str(login_path))
+        raise HTTPException(status_code=404, detail="Login page not found")
+
     presales_path = FRONTEND_DIR / "presales.html"
     if presales_path.exists():
         return FileResponse(str(presales_path))
     raise HTTPException(status_code=404, detail="Presales page not found")
 
 @app.get("/fsd")
-async def serve_fsd():
-    """Serve the FSD page"""
+async def serve_fsd(session_token: str = Cookie(None)):
+    """Serve the FSD page (protected)"""
+    if not check_auth(session_token):
+        login_path = FRONTEND_DIR / "login.html"
+        if login_path.exists():
+            return FileResponse(str(login_path))
+        raise HTTPException(status_code=404, detail="Login page not found")
+
     fsd_path = FRONTEND_DIR / "fsd.html"
     if fsd_path.exists():
         return FileResponse(str(fsd_path))

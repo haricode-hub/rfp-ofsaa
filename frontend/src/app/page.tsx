@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-import { Layout, useTheme } from '@/components/Layout';
+import { Layout, useTheme } from '@/components/ui/Layout';
 
 function HomeContent() {
   const { isDarkMode } = useTheme();

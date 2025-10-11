@@ -2,7 +2,8 @@
 
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import Link from 'next/link';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import { SunIcon, MoonIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -73,6 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
 const Navigation: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const router = useRouter();
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -80,6 +82,19 @@ const Navigation: React.FC = () => {
     { href: '#about', label: 'About' },
     { href: '#contact', label: 'Contact' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/login');
+    }
+  };
 
   return (
     <nav className="fixed top-0 w-full z-50 transition-colors duration-300 border-b"
@@ -128,6 +143,20 @@ const Navigation: React.FC = () => {
                 <MoonIcon className="h-5 w-5" />
               )}
             </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-300 font-medium text-sm"
+              style={{
+                backgroundColor: 'var(--blue-primary)',
+                color: 'white'
+              }}
+              aria-label="Logout"
+            >
+              <ArrowRightOnRectangleIcon className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
           </div>
 
           {/* Mobile menu button */}
@@ -145,6 +174,16 @@ const Navigation: React.FC = () => {
               ) : (
                 <MoonIcon className="h-5 w-5" />
               )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-lg transition-all duration-300"
+              style={{
+                color: 'var(--blue-primary)'
+              }}
+              aria-label="Logout"
+            >
+              <ArrowRightOnRectangleIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
