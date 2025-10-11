@@ -155,7 +155,7 @@ function HomeContent() {
             About Our Platform
           </h2>
           <p className="body-text-large mb-8">
-            SensAI is our organization's hub for intelligent automation and productivity—going far beyond document generation. It orchestrates AI-powered workflows; automates repetitive tasks; and applies advanced analytics and recommendations to drive better decisions. With an intuitive interface and governance-ready design, SensAI helps teams create, process, and analyze content, integrate with business systems, and streamline end-to-end operations for faster, smarter results.
+            SensAI is our organization&apos;s hub for intelligent automation and productivity—going far beyond document generation. It orchestrates AI-powered workflows; automates repetitive tasks; and applies advanced analytics and recommendations to drive better decisions. With an intuitive interface and governance-ready design, SensAI helps teams create, process, and analyze content, integrate with business systems, and streamline end-to-end operations for faster, smarter results.
           </p>
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <div className="text-center">

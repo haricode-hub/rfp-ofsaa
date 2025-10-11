@@ -25,7 +25,7 @@ import { Layout, useTheme } from "@/components/Layout";
 // guaranteed, but spacing, colors, and hierarchy are tuned carefully to match.
 
 function ChatInterface() {
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   const [showHelp, setShowHelp] = useState(false);
   const [canvasName, setCanvasName] = useState("New");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -171,14 +171,13 @@ function ChatInterface() {
     setShowProgress(true);
     try {
       const formData = new FormData();
-      const protocol = window.location.protocol;
 
       if (files.length > 1) {
         // Multiple files - use batch endpoint
         for (const file of files) {
           formData.append('files', file);
         }
-        const apiUrl = `${protocol}//192.168.2.95:8505/upload-multiple-documents`;
+        const apiUrl = `/upload-multiple-documents`;
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -204,7 +203,7 @@ function ChatInterface() {
       } else {
         // Single file - use existing endpoint
         formData.append('file', files[0]);
-        const apiUrl = `${protocol}//192.168.2.95:8505/upload-document`;
+        const apiUrl = `/upload-document`;
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -316,8 +315,7 @@ function ChatInterface() {
     setSelectedTextReference("");
 
     try {
-      const protocol = window.location.protocol;
-      const apiUrl = `${protocol}//192.168.2.95:8505/chat`;
+      const apiUrl = `/chat`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',

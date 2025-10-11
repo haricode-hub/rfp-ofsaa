@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react';
 import { Layout, useTheme } from '@/components/ui/Layout';
 import {
-  ClipboardDocumentListIcon,
   CheckCircleIcon,
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -17,14 +16,13 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 }
 
 function FSDGeneratorContent() {
-  const { isDarkMode } = useTheme();
+  const { } = useTheme();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<{
     filename: string;
     blob: Blob;
   } | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,8 +78,7 @@ function FSDGeneratorContent() {
       const formData = new FormData();
       formData.append('file', uploadedFile);
 
-      const protocol = window.location.protocol;
-      const response = await fetch(`${protocol}//192.168.2.95:8505/fsd/generate-from-document`, {
+      const response = await fetch(`/fsd/generate-from-document`, {
         method: 'POST',
         body: formData
       });
@@ -94,7 +91,7 @@ function FSDGeneratorContent() {
       const result = await response.json();
       if (result.success && result.document_id) {
         // Download the actual document using the document_id
-        const downloadResponse = await fetch(`${protocol}//192.168.2.95:8505/fsd/download/${result.document_id}`);
+        const downloadResponse = await fetch(`/fsd/download/${result.document_id}`);
         if (!downloadResponse.ok) {
           throw new Error('Failed to download generated document');
         }

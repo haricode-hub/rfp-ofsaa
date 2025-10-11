@@ -125,7 +125,7 @@ interface ProcessResponse {
 }
 
 function PresalesAgentContent() {
-  const { isDarkMode } = useTheme();
+  const { } = useTheme();
   const [step, setStep] = useState<'upload' | 'configure' | 'process' | 'download'>('upload');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
@@ -144,8 +144,7 @@ function PresalesAgentContent() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const protocol = window.location.protocol;
-      const response = await fetch(`${protocol}//192.168.2.95:8505/presales/upload`, {
+      const response = await fetch(`/presales/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -199,8 +198,7 @@ function PresalesAgentContent() {
         user_prompt: userPrompt.trim()
       };
 
-      const protocol = window.location.protocol;
-      const response = await fetch(`${protocol}//192.168.2.95:8505/presales/process`, {
+      const response = await fetch(`/presales/process`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,8 +225,7 @@ function PresalesAgentContent() {
     if (!processResponse) return;
 
     try {
-      const protocol = window.location.protocol;
-      const downloadUrl = `${protocol}//192.168.2.95:8505/presales/download/${processResponse.file_id}`;
+      const downloadUrl = `/presales/download/${processResponse.file_id}`;
 
       const response = await fetch(downloadUrl, {
         method: 'GET',

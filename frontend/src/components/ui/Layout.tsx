@@ -154,8 +154,6 @@ const Navigation: React.FC = () => {
 };
 
 const Footer: React.FC = () => {
-  const { isDarkMode } = useTheme();
-
   return (
     <footer className="transition-colors duration-300 py-12 px-4 sm:px-6 lg:px-8 border-t"
             style={{
