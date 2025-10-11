@@ -14,7 +14,7 @@ import {
   type Conversation,
 } from "@/lib/llm-storage";
 import ReactMarkdown from 'react-markdown';
-import { Paperclip, X, ChevronDown, Search } from "lucide-react";
+import { Paperclip, X, ChevronDown, Search, Globe } from "lucide-react";
 
 export default function LLMFarmPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -28,6 +28,7 @@ export default function LLMFarmPage() {
   const [uploadedDocuments, setUploadedDocuments] = useState<DocumentAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -177,14 +178,43 @@ export default function LLMFarmPage() {
 
       try {
         let accumulatedContent = "";
+        let sources: Array<{title: string; url: string}> | undefined;
 
         for await (const chunk of streamMessage({
           message: message,
           model: selectedModel.modelId,
-          documents: messageDocuments  // Send documents with message
+          documents: messageDocuments,  // Send documents with message
+          enable_web_search: enableWebSearch  // Send web search flag
         })) {
-          accumulatedContent += chunk.content;
+          // Handle content chunks
+          if (chunk.content) {
+            accumulatedContent += chunk.content;
 
+            setConversations((prev) =>
+              prev.map((conv) => {
+                if (conv.id !== conversationId) return conv;
+
+                return {
+                  ...conv,
+                  messages: conv.messages.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: accumulatedContent }
+                      : msg
+                  ),
+                  updatedAt: new Date(),
+                };
+              })
+            );
+          }
+
+          // Handle sources (comes at the end)
+          if (chunk.sources) {
+            sources = chunk.sources;
+          }
+        }
+
+        // Update with final sources if available
+        if (sources) {
           setConversations((prev) =>
             prev.map((conv) => {
               if (conv.id !== conversationId) return conv;
@@ -193,7 +223,7 @@ export default function LLMFarmPage() {
                 ...conv,
                 messages: conv.messages.map((msg) =>
                   msg.id === assistantMessageId
-                    ? { ...msg, content: accumulatedContent }
+                    ? { ...msg, sources }
                     : msg
                 ),
                 updatedAt: new Date(),
@@ -234,7 +264,7 @@ export default function LLMFarmPage() {
         setIsLoading(false);
       }
     },
-    [currentConversationId, currentConversation, conversations, selectedModel, isLoading, uploadedDocuments]
+    [currentConversationId, currentConversation, conversations, selectedModel, isLoading, uploadedDocuments, enableWebSearch]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -400,6 +430,31 @@ export default function LLMFarmPage() {
                     ) : (
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     )}
+
+                    {/* Show web search sources for assistant messages */}
+                    {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                      <div className="mt-4 pt-3 border-t" style={{ borderColor: 'var(--border-color)' }}>
+                        <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                          Sources from web search:
+                        </p>
+                        <div className="flex flex-col gap-1">
+                          {message.sources.map((source, idx) => (
+                            <a
+                              key={idx}
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs hover:underline flex items-start gap-1"
+                              style={{ color: 'var(--blue-primary)' }}
+                            >
+                              <span>[{idx + 1}]</span>
+                              <span className="flex-1">{source.title}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {message.model && (
                       <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
                         Model: {message.model}
@@ -578,6 +633,20 @@ export default function LLMFarmPage() {
                     title="Attach files"
                   >
                     <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEnableWebSearch(!enableWebSearch)}
+                    className="p-3 rounded-lg transition-all duration-300 hover:opacity-80"
+                    style={{
+                      backgroundColor: enableWebSearch ? 'var(--blue-primary)' : 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      color: enableWebSearch ? 'white' : 'var(--text-primary)'
+                    }}
+                    title={enableWebSearch ? "Web search enabled" : "Enable web search"}
+                  >
+                    <Globe className="w-5 h-5" />
                   </button>
 
                   <textarea
