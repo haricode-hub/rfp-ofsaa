@@ -14,6 +14,7 @@ import {
   type Conversation,
 } from "@/lib/llm-storage";
 import ReactMarkdown from 'react-markdown';
+import { Paperclip, X, ChevronDown, Search } from "lucide-react";
 
 export default function LLMFarmPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -23,7 +24,11 @@ export default function LLMFarmPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const loaded = loadConversations();
@@ -52,6 +57,7 @@ export default function LLMFarmPage() {
     setCurrentConversationId(newConversation.id);
     saveConversation(newConversation);
     setShowSidebar(false);
+    setUploadedFiles([]);
   }, []);
 
   const handleSelectConversation = useCallback((conversationId: string): void => {
@@ -76,6 +82,21 @@ export default function LLMFarmPage() {
     }
   }, [conversations, currentConversationId]);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+      setUploadedFiles((prev) => [...prev, ...newFiles]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = useCallback(
     async (message: string) => {
       if (!message.trim() || isLoading) return;
@@ -92,10 +113,17 @@ export default function LLMFarmPage() {
         conversation = newConversation;
       }
 
+      // Add file information to message if files are uploaded
+      let fullMessage = message;
+      if (uploadedFiles.length > 0) {
+        const fileInfo = uploadedFiles.map(f => `[Attached: ${f.name}]`).join('\n');
+        fullMessage = `${fileInfo}\n\n${message}`;
+      }
+
       const userMessage: Message = {
         id: `user-${Date.now()}`,
         role: "user",
-        content: message,
+        content: fullMessage,
         timestamp: new Date(),
       };
 
@@ -127,12 +155,13 @@ export default function LLMFarmPage() {
 
       setIsLoading(true);
       setInputMessage("");
+      setUploadedFiles([]);
 
       try {
         let accumulatedContent = "";
 
         for await (const chunk of streamMessage({
-          message,
+          message: fullMessage,
           model: selectedModel.modelId
         })) {
           accumulatedContent += chunk.content;
@@ -186,7 +215,7 @@ export default function LLMFarmPage() {
         setIsLoading(false);
       }
     },
-    [currentConversationId, currentConversation, conversations, selectedModel, isLoading]
+    [currentConversationId, currentConversation, conversations, selectedModel, isLoading, uploadedFiles]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -195,6 +224,29 @@ export default function LLMFarmPage() {
       handleSendMessage(inputMessage);
     }
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (inputMessage.trim()) {
+        handleSendMessage(inputMessage);
+      }
+    }
+  };
+
+  const filteredModels = LLM_MODELS.filter(model =>
+    model.name.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+    model.description.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+    model.provider.toLowerCase().includes(modelSearchQuery.toLowerCase())
+  );
+
+  const groupedModels = filteredModels.reduce((acc, model) => {
+    if (!acc[model.provider]) {
+      acc[model.provider] = [];
+    }
+    acc[model.provider].push(model);
+    return acc;
+  }, {} as Record<string, LLMModel[]>);
 
   const hasMessages = (currentConversation?.messages.length || 0) > 0;
 
@@ -209,7 +261,7 @@ export default function LLMFarmPage() {
         {/* Sidebar Toggle Button */}
         <button
           onClick={() => setShowSidebar(!showSidebar)}
-          className="fixed top-20 left-4 z-50 p-2 rounded-lg transition-all duration-300"
+          className="fixed top-20 left-4 z-50 p-2 rounded-lg transition-all duration-300 hover:opacity-80"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-color)',
@@ -234,7 +286,7 @@ export default function LLMFarmPage() {
             >
               <button
                 onClick={handleNewChat}
-                className="w-full mb-4 px-4 py-2 rounded-lg font-medium transition-all duration-300"
+                className="w-full mb-4 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:opacity-90"
                 style={{
                   backgroundColor: 'var(--blue-primary)',
                   color: 'white'
@@ -275,7 +327,7 @@ export default function LLMFarmPage() {
         {/* Main Chat Area */}
         <div className="max-w-4xl mx-auto px-4 py-8">
           {hasMessages ? (
-            <div className="space-y-6 mb-24">
+            <div className="space-y-6 mb-32">
               {currentConversation?.messages.map((message) => (
                 <div
                   key={message.id}
@@ -285,7 +337,7 @@ export default function LLMFarmPage() {
                   }}
                 >
                   <div
-                    className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                    className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-semibold"
                     style={{
                       backgroundColor: message.role === "user" ? 'var(--blue-primary)' : 'var(--bg-secondary)',
                       color: message.role === "user" ? 'white' : 'var(--text-primary)'
@@ -305,7 +357,7 @@ export default function LLMFarmPage() {
                         <ReactMarkdown>{message.content || "..."}</ReactMarkdown>
                       </div>
                     ) : (
-                      <p>{message.content}</p>
+                      <p className="whitespace-pre-wrap">{message.content}</p>
                     )}
                     {message.model && (
                       <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -332,75 +384,180 @@ export default function LLMFarmPage() {
           <div className="fixed bottom-0 left-0 right-0 p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <div className="max-w-4xl mx-auto">
               {/* Model Selector */}
-              <div className="mb-2 relative">
-                <button
-                  onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="px-4 py-2 rounded-lg text-sm transition-all duration-300"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)'
-                  }}
-                >
-                  {selectedModel.name} <span className="ml-2">▼</span>
-                </button>
-
-                {showModelSelector && (
-                  <div
-                    className="absolute bottom-full mb-2 left-0 w-96 max-h-96 overflow-y-auto rounded-lg p-2 shadow-lg"
+              <div className="mb-2">
+                <div className="relative">
+                  <button
+                    onClick={() => setShowModelSelector(!showModelSelector)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 hover:opacity-80"
                     style={{
                       backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)'
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)'
                     }}
                   >
-                    {LLM_MODELS.map((model) => (
-                      <button
-                        key={model.modelId}
-                        onClick={() => {
-                          setSelectedModel(model);
-                          setShowModelSelector(false);
-                        }}
-                        className="w-full text-left px-4 py-2 rounded-lg transition-all duration-300 hover:bg-opacity-80"
-                        style={{
-                          backgroundColor: model.modelId === selectedModel.modelId ? 'var(--blue-primary)' : 'transparent',
-                          color: model.modelId === selectedModel.modelId ? 'white' : 'var(--text-primary)'
-                        }}
-                      >
-                        <div className="font-medium">{model.name}</div>
-                        <div className="text-xs" style={{ color: model.modelId === selectedModel.modelId ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>
-                          {model.description}
+                    <span className="font-semibold">{selectedModel.name}</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {showModelSelector && (
+                    <div
+                      className="absolute bottom-full mb-2 left-0 w-[500px] max-h-[500px] rounded-xl shadow-2xl overflow-hidden"
+                      style={{
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      {/* Search Header */}
+                      <div className="p-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+                          <input
+                            type="text"
+                            placeholder="Search models..."
+                            value={modelSearchQuery}
+                            onChange={(e) => setModelSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
+                            style={{
+                              backgroundColor: 'var(--bg-primary)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-primary)'
+                            }}
+                          />
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                      </div>
+
+                      {/* Model List */}
+                      <div className="overflow-y-auto max-h-[400px]">
+                        {Object.entries(groupedModels).map(([provider, models]) => (
+                          <div key={provider}>
+                            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                              {provider}
+                            </div>
+                            {models.map((model) => (
+                              <button
+                                key={model.modelId}
+                                onClick={() => {
+                                  setSelectedModel(model);
+                                  setShowModelSelector(false);
+                                  setModelSearchQuery("");
+                                }}
+                                className="w-full text-left px-4 py-3 transition-all duration-300 hover:opacity-90"
+                                style={{
+                                  backgroundColor: model.modelId === selectedModel.modelId ? 'var(--blue-primary)' : 'transparent',
+                                  color: model.modelId === selectedModel.modelId ? 'white' : 'var(--text-primary)'
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-sm">{model.name}</div>
+                                    <div className="text-xs mt-1" style={{
+                                      color: model.modelId === selectedModel.modelId ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)'
+                                    }}>
+                                      {model.description}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs ml-2" style={{
+                                    color: model.modelId === selectedModel.modelId ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)'
+                                  }}>
+                                    ${model.pricing.input.toFixed(2)}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* File Upload Area */}
+              {uploadedFiles.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+                      style={{
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-color)'
+                      }}
+                    >
+                      <Paperclip className="w-4 h-4" style={{ color: 'var(--blue-primary)' }} />
+                      <span className="max-w-[200px] truncate">{file.name}</span>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="hover:opacity-70 transition-opacity"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Message Input */}
-              <form onSubmit={handleSubmit} className="flex gap-2">
+              <form onSubmit={handleSubmit} className="relative">
                 <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Ask anything..."
-                  disabled={isLoading}
-                  className="flex-1 px-4 py-3 rounded-lg transition-all duration-300 input"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)'
-                  }}
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg"
                 />
-                <button
-                  type="submit"
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="px-6 py-3 rounded-lg font-medium transition-all duration-300 btn btn-primary"
-                  style={{
-                    opacity: (isLoading || !inputMessage.trim()) ? 0.5 : 1
-                  }}
-                >
-                  {isLoading ? "Sending..." : "Send"}
-                </button>
+
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-3 rounded-lg transition-all duration-300 hover:opacity-80"
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)'
+                    }}
+                    title="Attach files"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Message LLM Farm..."
+                    disabled={isLoading}
+                    rows={1}
+                    className="flex-1 px-4 py-3 rounded-lg transition-all duration-300 resize-none"
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)',
+                      minHeight: '48px',
+                      maxHeight: '200px'
+                    }}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !inputMessage.trim()}
+                    className="p-3 rounded-lg font-medium transition-all duration-300"
+                    style={{
+                      backgroundColor: 'var(--blue-primary)',
+                      color: 'white',
+                      opacity: (isLoading || !inputMessage.trim()) ? 0.5 : 1,
+                      cursor: (isLoading || !inputMessage.trim()) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                  </button>
+                </div>
               </form>
             </div>
           </div>
