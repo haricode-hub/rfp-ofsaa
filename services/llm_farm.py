@@ -6,10 +6,31 @@ enabling chat functionality with various LLMs in a unified interface.
 
 import json
 from collections.abc import AsyncIterator
+from datetime import datetime
 from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
+
+
+class DocumentAttachment(BaseModel):
+    """Document attachment model for LLM Farm.
+
+    Attributes:
+        filename: Name of the uploaded document.
+        file_type: File extension/type.
+        file_size: Size of the file in bytes.
+        extracted_text: Text content extracted from the document.
+        upload_timestamp: When the document was uploaded.
+    """
+    filename: str = Field(..., description="Document filename")
+    file_type: str = Field(..., description="File extension/type")
+    file_size: int = Field(..., description="File size in bytes")
+    extracted_text: str = Field(..., description="Extracted text content")
+    upload_timestamp: datetime = Field(
+        default_factory=datetime.now,
+        description="Upload timestamp"
+    )
 
 
 class ChatRequest(BaseModel):
@@ -18,6 +39,7 @@ class ChatRequest(BaseModel):
     Attributes:
         message: User's input message for the AI model.
         model: AI model identifier from OpenRouter.
+        documents: Optional list of document attachments.
     """
     message: str = Field(
         ...,
@@ -28,6 +50,10 @@ class ChatRequest(BaseModel):
     model: str = Field(
         default="openai/gpt-4o-mini",
         description="AI model identifier from OpenRouter",
+    )
+    documents: list[DocumentAttachment] | None = Field(
+        default=None,
+        description="Optional document attachments"
     )
 
 
@@ -55,12 +81,41 @@ class LLMFarmService:
         self.api_key = api_key
         self.base_url = base_url
 
-    async def call_openrouter(self, message: str, model: str) -> dict[str, str]:
+    def _format_message_with_documents(
+        self, message: str, documents: list[DocumentAttachment] | None
+    ) -> str:
+        """Format message with document context.
+
+        Args:
+            message: User's input message.
+            documents: Optional list of document attachments.
+
+        Returns:
+            Formatted message with document context prepended.
+        """
+        if not documents:
+            return message
+
+        doc_context_parts = ["Context from uploaded documents:\n"]
+
+        for doc in documents:
+            doc_context_parts.append(
+                f"\n[Document: {doc.filename} ({doc.file_type})]\n{doc.extracted_text}\n"
+            )
+
+        doc_context_parts.append(f"\n[User Message]\n{message}")
+
+        return "\n".join(doc_context_parts)
+
+    async def call_openrouter(
+        self, message: str, model: str, documents: list[DocumentAttachment] | None = None
+    ) -> dict[str, str]:
         """Call OpenRouter API to generate AI response.
 
         Args:
             message: User's input message.
             model: AI model identifier.
+            documents: Optional list of document attachments.
 
         Returns:
             Dictionary containing the AI response and model used.
@@ -69,6 +124,8 @@ class LLMFarmService:
             httpx.HTTPStatusError: If API request fails.
             Exception: For other unexpected errors.
         """
+        formatted_message = self._format_message_with_documents(message, documents)
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
@@ -78,7 +135,7 @@ class LLMFarmService:
                 },
                 json={
                     "model": model,
-                    "messages": [{"role": "user", "content": message}],
+                    "messages": [{"role": "user", "content": formatted_message}],
                 },
                 timeout=60.0,
             )
@@ -89,13 +146,14 @@ class LLMFarmService:
             return {"message": ai_message, "model": model}
 
     async def stream_openrouter(
-        self, message: str, model: str
+        self, message: str, model: str, documents: list[DocumentAttachment] | None = None
     ) -> AsyncIterator[dict[str, str]]:
         """Stream AI responses from OpenRouter API.
 
         Args:
             message: User's input message.
             model: AI model identifier.
+            documents: Optional list of document attachments.
 
         Yields:
             Dictionary chunks containing partial AI responses.
@@ -104,6 +162,8 @@ class LLMFarmService:
             httpx.HTTPStatusError: If API request fails.
             Exception: For other unexpected errors.
         """
+        formatted_message = self._format_message_with_documents(message, documents)
+
         async with httpx.AsyncClient(timeout=60.0) as client:
             async with client.stream(
                 "POST",
@@ -114,7 +174,7 @@ class LLMFarmService:
                 },
                 json={
                     "model": model,
-                    "messages": [{"role": "user", "content": message}],
+                    "messages": [{"role": "user", "content": formatted_message}],
                     "stream": True,
                 },
             ) as response:

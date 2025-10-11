@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Layout } from "@/components/ui/Layout";
-import { streamMessage } from "@/lib/llm-farm-api";
+import { streamMessage, uploadDocument, type DocumentAttachment } from "@/lib/llm-farm-api";
 import { LLM_MODELS, DEFAULT_MODEL, type LLMModel } from "@/lib/llm-models";
 import {
   loadConversations,
@@ -25,6 +25,8 @@ export default function LLMFarmPage() {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<DocumentAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,11 +84,28 @@ export default function LLMFarmPage() {
     }
   }, [conversations, currentConversationId]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const newFiles = Array.from(files);
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newFiles = Array.from(files);
+
+    try {
+      // Upload all files and get processed documents
+      const uploadPromises = newFiles.map(file => uploadDocument(file));
+      const results = await Promise.all(uploadPromises);
+
+      // Add to uploaded documents
+      setUploadedDocuments((prev) => [...prev, ...results]);
+
+      // Also keep files for display
       setUploadedFiles((prev) => [...prev, ...newFiles]);
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert(`Error uploading files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -95,6 +114,7 @@ export default function LLMFarmPage() {
 
   const removeFile = (index: number) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadedDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSendMessage = useCallback(
@@ -113,18 +133,15 @@ export default function LLMFarmPage() {
         conversation = newConversation;
       }
 
-      // Add file information to message if files are uploaded
-      let fullMessage = message;
-      if (uploadedFiles.length > 0) {
-        const fileInfo = uploadedFiles.map(f => `[Attached: ${f.name}]`).join('\n');
-        fullMessage = `${fileInfo}\n\n${message}`;
-      }
+      // Store current documents for this message
+      const messageDocuments = uploadedDocuments.length > 0 ? [...uploadedDocuments] : undefined;
 
       const userMessage: Message = {
         id: `user-${Date.now()}`,
         role: "user",
-        content: fullMessage,
+        content: message,
         timestamp: new Date(),
+        documents: messageDocuments,  // Attach documents to message
       };
 
       const assistantMessageId = `assistant-${Date.now()}`;
@@ -156,13 +173,15 @@ export default function LLMFarmPage() {
       setIsLoading(true);
       setInputMessage("");
       setUploadedFiles([]);
+      setUploadedDocuments([]);  // Clear documents after sending
 
       try {
         let accumulatedContent = "";
 
         for await (const chunk of streamMessage({
-          message: fullMessage,
-          model: selectedModel.modelId
+          message: message,
+          model: selectedModel.modelId,
+          documents: messageDocuments  // Send documents with message
         })) {
           accumulatedContent += chunk.content;
 
@@ -215,7 +234,7 @@ export default function LLMFarmPage() {
         setIsLoading(false);
       }
     },
-    [currentConversationId, currentConversation, conversations, selectedModel, isLoading, uploadedFiles]
+    [currentConversationId, currentConversation, conversations, selectedModel, isLoading, uploadedDocuments]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -352,6 +371,28 @@ export default function LLMFarmPage() {
                       border: message.role === "assistant" ? '1px solid var(--border-color)' : 'none'
                     }}
                   >
+                    {/* Show attached documents for user messages */}
+                    {message.role === "user" && message.documents && message.documents.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {message.documents.map((doc, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
+                            style={{
+                              backgroundColor: 'var(--bg-primary)',
+                              border: '1px solid var(--border-color)'
+                            }}
+                          >
+                            <Paperclip className="w-3 h-3" style={{ color: 'var(--blue-primary)' }} />
+                            <span>{doc.filename}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              ({Math.round(doc.file_size / 1024)}KB)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {message.role === "assistant" ? (
                       <div className="prose prose-sm max-w-none" style={{ color: 'var(--text-primary)' }}>
                         <ReactMarkdown>{message.content || "..."}</ReactMarkdown>
@@ -472,6 +513,17 @@ export default function LLMFarmPage() {
                 </div>
               </div>
 
+              {/* Upload Status */}
+              {isUploading && (
+                <div className="mb-2 px-3 py-2 rounded-lg text-sm" style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--blue-primary)'
+                }}>
+                  Uploading and processing documents...
+                </div>
+              )}
+
               {/* File Upload Area */}
               {uploadedFiles.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -486,10 +538,14 @@ export default function LLMFarmPage() {
                     >
                       <Paperclip className="w-4 h-4" style={{ color: 'var(--blue-primary)' }} />
                       <span className="max-w-[200px] truncate">{file.name}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        ({Math.round(file.size / 1024)}KB)
+                      </span>
                       <button
                         onClick={() => removeFile(index)}
                         className="hover:opacity-70 transition-opacity"
                         style={{ color: 'var(--text-secondary)' }}
+                        disabled={isUploading}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -506,7 +562,7 @@ export default function LLMFarmPage() {
                   onChange={handleFileUpload}
                   className="hidden"
                   multiple
-                  accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg"
+                  accept=".pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx,.py,.js,.ts,.java,.cpp,.c,.html,.css,.json,.xml"
                 />
 
                 <div className="flex items-end gap-2">
