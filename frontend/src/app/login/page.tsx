@@ -28,7 +28,8 @@ export default function LoginPage() {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // Redirect to home page after successful login - use window.location for full page reload
+      // Wait a moment for cookie to be set, then redirect with full page reload
+      await new Promise(resolve => setTimeout(resolve, 100));
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
