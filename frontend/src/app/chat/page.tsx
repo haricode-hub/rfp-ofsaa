@@ -646,7 +646,7 @@ function ChatInterface() {
               <div className={`w-full max-w-[720px] px-4 transition-all duration-300 ${
                 isGenerating ? 'transform scale-[1.02]' : ''
               }`}>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {/* Selected text reference */}
                   {selectedTextReference && (
                     <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl border ${
@@ -688,7 +688,7 @@ function ChatInterface() {
                   )}
                   
                   {/* Web Search Toggle */}
-                  <div className="flex items-center gap-2 px-2">
+                  <div className="flex items-center gap-3 px-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"

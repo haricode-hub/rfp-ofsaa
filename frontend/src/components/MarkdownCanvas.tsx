@@ -216,7 +216,7 @@ const MarkdownCanvas = forwardRef<MarkdownCanvasRef, MarkdownCanvasProps>(
     return (
       <div
         onClick={handleClick}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 cursor-text"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-6 cursor-text"
         style={{
           fontFamily: FONT_STYLES.fontFamily,
           fontWeight: FONT_STYLES.fontWeight.normal,
@@ -250,7 +250,7 @@ const MarkdownCanvas = forwardRef<MarkdownCanvasRef, MarkdownCanvasProps>(
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
-      className={`flex-1 w-full resize-none bg-transparent p-4 focus:outline-none overflow-y-auto ${
+      className={`flex-1 w-full resize-none bg-transparent p-6 focus:outline-none overflow-y-auto ${
         isDarkMode 
           ? 'text-zinc-200 placeholder:text-zinc-400/30' 
           : 'text-gray-900 placeholder:text-gray-500/50'
