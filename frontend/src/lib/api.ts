@@ -42,6 +42,8 @@ export const API_ENDPOINTS = {
   },
 } as const;
 
+import { RfpAnalysis, Proposal, GenerateJsonResponse } from '@/types';
+
 // RFP API functions
 export async function uploadRfp(file: File): Promise<RfpAnalysis> {
   const formData = new FormData();
