@@ -31,4 +31,45 @@ export const API_ENDPOINTS = {
     cacheStats: `${API_BASE_URL}/presales/cache-stats`,
     clearCache: `${API_BASE_URL}/presales/clear-cache`,
   },
+
+  // RFP endpoints
+  rfp: {
+    upload: `${API_BASE_URL}/api/rfp/upload`,
+    generateJson: `${API_BASE_URL}/api/rfp/generate-json`,
+    generateDocx: `${API_BASE_URL}/api/rfp/generate-docx`,
+    health: `${API_BASE_URL}/api/rfp/health`,
+    pingOllama: `${API_BASE_URL}/api/rfp/ping-ollama`,
+  },
 } as const;
+
+// RFP API functions
+export async function uploadRfp(file: File): Promise<RfpAnalysis> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(API_ENDPOINTS.rfp.upload, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) throw new Error('Upload failed');
+  return response.json();
+}
+
+export async function generateRfpJson(data: { rfp_text: string; meta?: { client_name?: string; project_title?: string } }): Promise<GenerateJsonResponse> {
+  const response = await fetch(API_ENDPOINTS.rfp.generateJson, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Generation failed');
+  return response.json();
+}
+
+export async function generateRfpDocx(proposal: Proposal): Promise<Blob> {
+  const response = await fetch(API_ENDPOINTS.rfp.generateDocx, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(proposal),
+  });
+  if (!response.ok) throw new Error('DOCX generation failed');
+  return response.blob();
+}
