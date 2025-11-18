@@ -26,7 +26,7 @@ from .rfp_models import (
     UploadResponse, GenerateJSONResponse, HealthResponse, PingOllamaResponse
 )
 from .text_extraction import extract_text_from_file, validate_file_type
-from .ai_service import generate_completion  # Assuming ai_service has this for Ollama
+# from .ai_service import generate_completion  # Will add to ai_service
 
 logger = structlog.get_logger()
 
@@ -277,33 +277,24 @@ Keep the narrative polished and concise. Ensure payment_milestones percentages s
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
 
             # Use ai_service for generation if available, else direct Ollama
-            try:
-                # Assume ai_service.generate_completion is async and returns response text
-                raw_response = await generate_completion(
-                    model=settings.ollama_model,
-                    prompt=full_prompt,
-                    base_url=settings.ollama_base_url,
+            # Direct Ollama call for now
+            payload = {
+                "model": settings.ollama_model,
+                "stream": False,
+                "prompt": full_prompt
+            }
+            async with self.client as client:
+                response = await client.post(
+                    f"{settings.ollama_base_url}/api/generate",
+                    json=payload,
                     timeout=settings.ollama_timeout
                 )
-            except:
-                # Fallback to direct httpx
-                payload = {
-                    "model": settings.ollama_model,
-                    "stream": False,
-                    "prompt": full_prompt
-                }
-                async with self.client as client:
-                    response = await client.post(
-                        f"{settings.ollama_base_url}/api/generate",
-                        json=payload,
-                        timeout=settings.ollama_timeout
-                    )
 
-                    if response.status_code != 200:
-                        raise Exception(f"Ollama API error: {response.status_code} - {response.text}")
+                if response.status_code != 200:
+                    raise Exception(f"Ollama API error: {response.status_code} - {response.text}")
 
-                    response_data = response.json()
-                    raw_response = response_data.get("response", "").strip()
+                response_data = response.json()
+                raw_response = response_data.get("response", "").strip()
 
             if not raw_response:
                 raise Exception("Empty response from AI")
@@ -488,7 +479,7 @@ Keep the narrative polished and concise. Ensure payment_milestones percentages s
             ],
             commercials=CommercialInfo(
                 currency=ORG.currency,
-                line_items=line_items,
+                line_items=[CommercialLineItem(**item) for item in line_items],
                 discount_percent=0,
                 tax_percent=tax_percent,
                 payment_terms_summary="Oracle delivery services billed against milestone completions; invoices due net 30 days.",
@@ -498,21 +489,21 @@ Keep the narrative polished and concise. Ensure payment_milestones percentages s
                     "Visa and work permit costs for Oracle delivery resources, if applicable"
                 ],
                 payment_milestones=[
-                    {
-                        "description": "Oracle mobilization and environment readiness",
-                        "percent": 30,
-                        "amount": round(grand_total * 0.30, 2)
-                    },
-                    {
-                        "description": "Solution build and conference room pilot sign-off",
-                        "percent": 40,
-                        "amount": round(grand_total * 0.40, 2)
-                    },
-                    {
-                        "description": "Production go-live and Oracle hypercare closure",
-                        "percent": 30,
-                        "amount": round(grand_total * 0.30, 2)
-                    }
+                    PaymentMilestone(
+                        description="Oracle mobilization and environment readiness",
+                        percent=30,
+                        amount=round(grand_total * 0.30, 2)
+                    ),
+                    PaymentMilestone(
+                        description="Solution build and conference room pilot sign-off",
+                        percent=40,
+                        amount=round(grand_total * 0.40, 2)
+                    ),
+                    PaymentMilestone(
+                        description="Production go-live and Oracle hypercare closure",
+                        percent=30,
+                        amount=round(grand_total * 0.30, 2)
+                    )
                 ]
             ),
             payment_terms_details=[

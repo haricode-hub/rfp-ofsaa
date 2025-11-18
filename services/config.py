@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import List
-from pydantic import Field, ConfigDict
+from pydantic import Field
+from pydantic_settings import SettingsConfigDict
 
 class Settings(BaseSettings):
     # Server
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     currency: str = Field(default="USD", description="Default currency")
     default_tax_percent: float = Field(default=18.0, description="Default tax percentage")
     
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
     )
